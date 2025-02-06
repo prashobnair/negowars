@@ -1,0 +1,13 @@
+# Node.js (Frontend)
+node_modules/
+build/
+.env
+
+# Python (Backend)
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# IDE specific
+.idea/
