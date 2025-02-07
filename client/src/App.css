@@ -1,38 +1,67 @@
-.App {
-  text-align: center;
-}
+/* client/src/App.css */
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.chat-container {
+  width: 500px;
+  margin: 20px auto;
+  border: 1px solid #ccc;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+  height: 400px; /* Set a fixed height for the chat area */
+}
+
+.message-list {
+  flex-grow: 1; /* Allow the message list to fill available space */
+  overflow-y: auto; /* Add scrollbar if messages overflow */
+  margin-bottom: 10px;
+}
+
+.message {
+  padding: 8px 12px;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  clear: both; /* Ensure messages stack vertically */
+}
+
+.my-message {
+  background-color: #DCF8C6; /* Light green for own messages */
+  float: right; /* Align own messages to the right */
+  max-width: 70%; /* Limit message width */
+
+}
+
+.other-message {
+  background-color: #f0f0f0; /* Light gray for other player's messages */
+  float: left; /* Align other messages to the left */
+  max-width: 70%; /* Limit message width */
+}
+
+.message-player {
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+.input-area {
+  display: flex;
+}
+
+.message-input {
+  flex-grow: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+.send-button {
+  padding: 8px 15px;
+  background-color: #4CAF50; /* Green */
   color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.send-button:hover {
+  background-color: #3e8e41;
 }
