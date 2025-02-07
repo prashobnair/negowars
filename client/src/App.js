@@ -27,12 +27,12 @@ function App() {
                     const messageId = parts[1];
                     const playerNumber = parts[2];
                     const messageContent = parts[3];
-                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]); // Store player and sender info
+                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
                 } else if (messageType === "msg") {
                     const messageId = parts[1];
                     const playerNumber = parts[2];
                     const messageContent = parts[3];
-                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "other" }]); // Store player and sender info
+                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "other" }]);
                 }
             };
 
@@ -47,6 +47,19 @@ function App() {
             socketRef.current.send(messageInput);
             setMessageInput('');
         }
+    };
+
+    // --- Button Handlers (Log to Console) ---
+    const handleAccept = () => {
+        console.log("Accept button clicked");
+    };
+
+    const handleOffer = () => {
+        console.log("Offer button clicked");
+    };
+
+    const handleObjectives = () => {
+        console.log("Objectives button clicked");
     };
 
     return (
@@ -70,6 +83,12 @@ function App() {
                     className="message-input"
                 />
                 <button onClick={sendMessage} className="send-button">Send</button>
+            </div>
+            {/* --- Action Buttons --- */}
+            <div className="action-buttons">
+                <button onClick={handleAccept} className="action-button">Accept</button>
+                <button onClick={handleOffer} className="action-button">Offer</button>
+                <button onClick={handleObjectives} className="action-button">Objectives</button>
             </div>
         </div>
     );
