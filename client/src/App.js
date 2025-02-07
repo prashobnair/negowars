@@ -18,22 +18,31 @@ function App() {
             };
 
             socketRef.current.onmessage = (event) => {
-                console.log('Received:', event.data);
-                const parts = event.data.split("|"); // Changed to pipe delimiter
+                const parts = event.data.split("|");
                 const messageType = parts[0];
-              
-                if (messageType === "init") {
-                  const playerNumber = parts[1];
-                  setMyPlayerNumber(playerNumber);
-                } else if (messageType === "ack" || messageType === "msg" || messageType === "offer") {
-                  const [_, messageId, playerNumber, messageContent] = parts;
-                  setMessages((prev) => [...prev, {
-                    player: playerNumber,
-                    text: messageContent,
-                    sender: messageType === "ack" ? "me" : "other"
-                  }]);
+                let playerNumber = null;
+                let messageContent = null;
+
+
+                if (messageType.startsWith("init")) {
+                    playerNumber = parts[1];
+                    setMyPlayerNumber(playerNumber);
+                    setMessages((prev) => [...prev, { player: playerNumber, text: `You are Player ${playerNumber}`, sender: "system" }]);
+                } else if (messageType === "ack") {
+                    playerNumber = parts[2];
+                    messageContent = parts[3];
+                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
+                } else if (messageType === "msg") {
+                    playerNumber = parts[2];
+                    messageContent = parts[3];
+                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "other" }]);
+                }  else if (messageType === "offer") {
+                    playerNumber = parts[2];
+                    messageContent = parts[3];
+                    const sender = playerNumber === myPlayerNumber ? "me" : "other";
+                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: sender }]);
                 }
-              };
+            };
 
             socketRef.current.onclose = () => {
                 console.log('WebSocket disconnected');
@@ -61,9 +70,8 @@ function App() {
     };
 
     const handleSubmitOffer = () => {
-        // --- Send offer to backend ---
         if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-            socketRef.current.send(`offer:${offerAmount}`); // format: "offer:<amount>"
+            socketRef.current.send(`offer:${offerAmount}`);
         }
 
         setIsOfferModalOpen(false);
@@ -79,11 +87,12 @@ function App() {
     return (
         <div className="chat-container">
             <h1>NegoWars Chat (MVP)</h1>
-             {myPlayerNumber && <h2>You are Player {myPlayerNumber}</h2>} {/* Display player number */}
             <div className="message-list">
                 {messages.map((msg, index) => (
-                    <div key={index} className={`message ${msg.sender === 'me' ? 'my-message' : 'other-message'}`}>
-                        <span className="message-player">Player {msg.player}: </span>
+                    <div key={index} className={`message ${msg.sender === 'me' ? 'my-message' : msg.sender === 'system' ? 'system-message' : 'other-message'}`}>
+                        {msg.sender !== "system" && (
+                            <span className="message-player">Player {msg.player}: </span>
+                        )}
                         <span className="message-text">{msg.text}</span>
                     </div>
                 ))}
