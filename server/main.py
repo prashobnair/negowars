@@ -18,36 +18,52 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-connected_clients = []
+connected_clients = []  # List to store client info (websocket and player number)
+player_counter = 1  # Counter to assign player numbers
+
 
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
 
-@app.websocket("/ws")  # Changed back to @app.websocket
-async def websocket_endpoint(websocket: WebSocket):  # Use WebSocket, not Request
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    global player_counter  # Access the global counter
+
     await websocket.accept()
-    print(f"Client connected: {websocket.client}")
-    connected_clients.append(websocket)
+
+    # Assign a player number and store client info
+    player_number = player_counter
+    player_counter += 1
+    client_info = {"websocket": websocket, "player": player_number} #storing as dictionary
+    connected_clients.append(client_info)
+    print(f"Client connected: {websocket.client}, Player {player_number}")
+
+    # Send initial message with player number to the client
+    await websocket.send_text(f"init:{player_number}")
 
     try:
         while True:
             data = await websocket.receive_text()
-            print(f"Received: {data}")
+            print(f"Received from Player {player_number}: {data}")
 
             # Generate a unique message ID
             message_id = str(uuid.uuid4())
 
             # Send confirmation back to the sender
-            await websocket.send_text(f"ack:{message_id}:{data}")
+            await websocket.send_text(f"ack:{message_id}:{player_number}:{data}")
 
             # Broadcast to all other clients
             for client in connected_clients:
-                if client != websocket:
-                    await client.send_text(f"msg:{message_id}:{data}")
+                if client["websocket"] != websocket:
+                    await client["websocket"].send_text(f"msg:{message_id}:{player_number}:{data}")
 
     except WebSocketDisconnect:
-        print(f"Client disconnected: {websocket.client}")
-        connected_clients.remove(websocket)
+        print(f"Client disconnected: {websocket.client}, Player {player_number}")
+        # Find and remove the client from the list
+        for i, client in enumerate(connected_clients):
+            if client["websocket"] == websocket:
+                del connected_clients[i]
+                break
     except Exception as e:
         print(f"An error occurred: {e}")
