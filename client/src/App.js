@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './App.css'; // Import the CSS file
+import './App.css';
 
 function App() {
     const [messages, setMessages] = useState([]);
     const [messageInput, setMessageInput] = useState('');
     const [myPlayerNumber, setMyPlayerNumber] = useState(null);
+    const [isOfferModalOpen, setIsOfferModalOpen] = useState(false); // Add modal state
+    const [offerAmount, setOfferAmount] = useState(''); // Add offer amount state
     const socketRef = useRef(null);
 
     useEffect(() => {
@@ -27,12 +29,12 @@ function App() {
                     const messageId = parts[1];
                     const playerNumber = parts[2];
                     const messageContent = parts[3];
-                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]); // Store player and sender info
+                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
                 } else if (messageType === "msg") {
                     const messageId = parts[1];
                     const playerNumber = parts[2];
                     const messageContent = parts[3];
-                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "other" }]); // Store player and sender info
+                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "other" }]);
                 }
             };
 
@@ -48,6 +50,31 @@ function App() {
             setMessageInput('');
         }
     };
+
+    const handleAccept = () => {
+        console.log("Accept button clicked");
+    };
+
+    const handleOffer = () => {
+        setIsOfferModalOpen(true); // Open the modal
+    };
+
+    const handleObjectives = () => {
+        console.log("Objectives button clicked");
+    };
+
+    // --- Modal Handlers ---
+    const handleSubmitOffer = () => {
+        console.log("Offer submitted:", offerAmount);
+        setIsOfferModalOpen(false); // Close the modal
+        setOfferAmount(''); // Reset the offer amount
+    };
+
+    const handleCancelOffer = () => {
+        setIsOfferModalOpen(false); // Close the modal
+        setOfferAmount(''); // Reset the offer amount
+    };
+
 
     return (
         <div className="chat-container">
@@ -71,6 +98,32 @@ function App() {
                 />
                 <button onClick={sendMessage} className="send-button">Send</button>
             </div>
+            <div className="action-buttons">
+                <button onClick={handleAccept} className="action-button">Accept</button>
+                <button onClick={handleOffer} className="action-button">Offer</button>
+                <button onClick={handleObjectives} className="action-button">Objectives</button>
+            </div>
+
+            {/* --- Offer Modal --- */}
+            {isOfferModalOpen && (
+                <div className="modal-overlay">
+                    <div className="modal">
+                        <h2>Make an Offer</h2>
+                        <label htmlFor="offerAmount">Salary Offer:</label>
+                        <input
+                            type="number"
+                            id="offerAmount"
+                            value={offerAmount}
+                            onChange={(e) => setOfferAmount(e.target.value)}
+                            className="modal-input"
+                        />
+                        <div className="modal-buttons">
+                            <button onClick={handleSubmitOffer} className="modal-button modal-submit">Submit</button>
+                            <button onClick={handleCancelOffer} className="modal-button modal-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
