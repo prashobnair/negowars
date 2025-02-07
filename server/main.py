@@ -28,14 +28,14 @@ async def root():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    global player_counter  # Access the global counter
+    global player_counter
 
     await websocket.accept()
 
     # Assign a player number and store client info
     player_number = player_counter
     player_counter += 1
-    client_info = {"websocket": websocket, "player": player_number} #storing as dictionary
+    client_info = {"websocket": websocket, "player": player_number}
     connected_clients.append(client_info)
     print(f"Client connected: {websocket.client}, Player {player_number}")
 
@@ -47,20 +47,25 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             print(f"Received from Player {player_number}: {data}")
 
-            # Generate a unique message ID
-            message_id = str(uuid.uuid4())
+            # --- Handle Offer Messages ---
+            if data.startswith("offer:"):
+                offer_amount = data.split(":")[1]
+                message_id = str(uuid.uuid4())
 
-            # Send confirmation back to the sender
-            await websocket.send_text(f"ack:{message_id}:{player_number}:{data}")
+                # Broadcast the offer to all clients
+                for client in connected_clients:
+                    await client["websocket"].send_text(f"offer|{message_id}|{player_number}|Offer: ${offer_amount}")
 
-            # Broadcast to all other clients
-            for client in connected_clients:
-                if client["websocket"] != websocket:
-                    await client["websocket"].send_text(f"msg:{message_id}:{player_number}:{data}")
+            # --- Handle Regular Chat Messages ---
+            else:
+                message_id = str(uuid.uuid4())
+                await websocket.send_text(f"ack|{message_id}|{player_number}|{data}")
+                for client in connected_clients:
+                    if client["websocket"] != websocket:
+                        await client["websocket"].send_text(f"msg|{message_id}|{player_number}|{data}")
 
     except WebSocketDisconnect:
         print(f"Client disconnected: {websocket.client}, Player {player_number}")
-        # Find and remove the client from the list
         for i, client in enumerate(connected_clients):
             if client["websocket"] == websocket:
                 del connected_clients[i]
