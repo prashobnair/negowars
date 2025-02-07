@@ -6,8 +6,7 @@ function App() {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    // Connect to WebSocket
-    if (!socketRef.current) { // Only connect if not already connected
+    if (!socketRef.current) {
         socketRef.current = new WebSocket('ws://localhost:8000/ws');
 
         socketRef.current.onopen = () => {
@@ -16,22 +15,28 @@ function App() {
 
         socketRef.current.onmessage = (event) => {
           console.log('Received:', event.data);
-          setMessages((prev) => [...prev, event.data]);
+          const parts = event.data.split(":"); // Split the message
+          const messageType = parts[0];
+
+            if(messageType === "ack") {
+                const messageId = parts[1];
+                const messageContent = parts[2];
+                setMessages((prev) => [...prev, messageContent]);
+            } else if (messageType === "msg") {
+                const messageId = parts[1];
+                const messageContent = parts[2];
+                setMessages((prev) => [...prev, messageContent]);
+            }
         };
 
         socketRef.current.onclose = () => {
           console.log('WebSocket disconnected');
-          // Consider reconnecting here, if desired.
         };
     }
-
-    // No cleanup function here! We want to keep the connection open.
-
-  }, []); // Keep the empty dependency array to run only on mount
-
+  }, []);
 
   const sendMessage = () => {
-    if (messageInput.trim() && socketRef.current?.readyState === WebSocket.OPEN) {
+    if (messageInput.trim() && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(messageInput);
       setMessageInput('');
     }
