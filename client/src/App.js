@@ -132,17 +132,18 @@ function App() {
                     ]);
                 }  else if (messageType === "offer") {
                     const [_, messageId, playerNumber, messageContent] = parts;
-                    const sender = playerNumber === myPlayerNumberRef.current ? "me" : "other";
-                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: sender }]);
-
-                    // --- Update Current Offer State ---
-                    const offerDetails = messageContent.split(": "); // Split "Offer: $XX,XXX"
-                    if (offerDetails.length === 2 && offerDetails[0] === "Offer") {
-                      const offerValueString = offerDetails[1].replace(/[^0-9]/g, ''); // Remove non-numeric
-                      const offerValue = parseInt(offerValueString, 10);
-                      if (!isNaN(offerValue)) { //check if offer value is a valid number
-                        setCurrentSalaryOffer(offerValue);
-                      }
+                    const offerPrefix = "Offer: $";
+                    if (messageContent.startsWith(offerPrefix)) {
+                        // Remove the prefix and split by commas
+                        const offerParts = messageContent.slice(offerPrefix.length).split(",");
+                        if (offerParts.length === 3) {
+                            const salary = parseInt(offerParts[0], 10);
+                            const bonus = parseInt(offerParts[1], 10);
+                            const remoteDays = parseInt(offerParts[2], 10);
+                            if (!isNaN(salary)) setCurrentSalaryOffer(salary);
+                            if (!isNaN(bonus)) setCurrentBonusOffer(bonus);
+                            if (!isNaN(remoteDays)) setCurrentRemoteDaysOffer(remoteDays);
+                        }
                     }
                 } else if (messageType === "gameover") {
                     const [_, messageId, messageContent] = parts;
