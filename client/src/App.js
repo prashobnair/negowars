@@ -12,10 +12,19 @@ function App() {
     const myPlayerNumberRef = useRef(null);
     const [playerRole, setPlayerRole] = useState(null);
 
-    // --- NEW: State for Current Offer ---
+    // --- State for Current Offer ---
     const [currentSalaryOffer, setCurrentSalaryOffer] = useState(null);
     const [currentBonusOffer, setCurrentBonusOffer] = useState(null);
     const [currentRemoteDaysOffer, setCurrentRemoteDaysOffer] = useState(null);
+
+    // --- State for Offer Modal Input ---
+    const [modalSalary, setModalSalary] = useState('');
+    const [modalBonus, setModalBonus] = useState('');
+    const [modalRemoteDays, setModalRemoteDays] = useState('');
+
+    // --- State for Timer ---
+    const [timeLeft, setTimeLeft] = useState(7 * 60); // 7 minutes in seconds
+
 
     // --- Define Objectives (Hardcoded for MVP) ---
     const candidatePublicObjectives = [
@@ -45,7 +54,7 @@ function App() {
     const hrHiddenObjectives = [
         {
           id: "quick",
-          description: "Quick Close: Finalize the deal within 3 rounds",
+          description: "Quick Close: Finalize the deal within 3 minutes",
           bonus: "+30 points if achieved",
         },
         {
@@ -58,38 +67,69 @@ function App() {
     // --- State for storing the selected hidden objective ---
     const [hiddenObjective, setHiddenObjective] = useState(null);
 
+
+    // --- useEffect for WebSocket Connection ---
     useEffect(() => {
         if (!socketRef.current) {
             socketRef.current = new WebSocket('ws://localhost:8000/ws');
-
+    
             socketRef.current.onopen = () => {
                 console.log('WebSocket connected');
             };
-
+    
             socketRef.current.onmessage = (event) => {
+                console.log('Received event:', event); // Keep this log
+                console.log('Received event.data:', event.data); // Keep this log
                 const parts = event.data.split("|");
+                console.log('Parts:', parts); // Keep this log.
                 const messageType = parts[0];
-
+                console.log("messageType:", messageType); // Keep
+    
                 if (messageType.startsWith("init")) {
-                    const playerNumber = parts[1]; // Correctly get playerNumber from parts[1]
+                    const playerNumber = parts[1];
                     setMyPlayerNumber(playerNumber);
-                    myPlayerNumberRef.current = playerNumber; // Keep the ref updated
+                    myPlayerNumberRef.current = playerNumber;
                 } else if (messageType === "role") {
                     const role = parts[1];
+                    console.log("Received role:", role); // ADD THIS LOG
                     setPlayerRole(role);
-
-                    const hiddenObjectives = role === "candidate" ? candidateHiddenObjectives : hrHiddenObjectives;
+    
+                    const hiddenObjectives = role === "Candidate" ? candidateHiddenObjectives : hrHiddenObjectives;
                     const randomIndex = Math.floor(Math.random() * hiddenObjectives.length);
                     setHiddenObjective(hiddenObjectives[randomIndex]);
-
-                    setMessages((prev) => [...prev, { player: myPlayerNumberRef.current, text: `You are ${role.charAt(0).toUpperCase() + role.slice(1)}`, sender: "system" }]);
-
+    
+                    // --- Add "You are..." message HERE ---
+                    setMessages((prev) => [
+                        ...prev, 
+                        { player: myPlayerNumberRef.current, text: `You are ${role.charAt(0).toUpperCase() + role.slice(1)}`, sender: "system" }
+                    ]);
+                    
                 } else if (messageType === "ack") {
-                    const [_, messageId, playerNumber, messageContent] = parts;
-                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
+                    // For testing, also add ack messages as chat messages
+                    const sender = parts[2];
+                    const text = parts.slice(3).join("|");
+                    setMessages((prev) => [
+                        ...prev,
+                        { 
+                            player: sender, 
+                            text: text, 
+                            sender: sender === myPlayerNumberRef.current ? 'me' : 'other',
+                            role: sender % 2 !== 0 ? 'Candidate' : 'HR'  // Add role based on player number
+                        }
+                    ]);
                 } else if (messageType === "msg") {
-                    const [_, messageId, playerNumber, messageContent] = parts;
-                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "other" }]);
+                    const sender = parts[2];
+                    const text = parts.slice(3).join("|");
+                    console.log("Received chat message from:", sender, "text:", text);
+                    setMessages((prev) => [
+                        ...prev,
+                        {
+                            player: sender,
+                            text: text,
+                            sender: sender === myPlayerNumberRef.current ? 'me' : 'other',
+                            role: Number(sender) % 2 !== 0 ? 'Candidate' : 'HR',
+                        }
+                    ]);
                 }  else if (messageType === "offer") {
                     const [_, messageId, playerNumber, messageContent] = parts;
                     const sender = playerNumber === myPlayerNumberRef.current ? "me" : "other";
@@ -107,14 +147,33 @@ function App() {
                 } else if (messageType === "gameover") {
                     const [_, messageId, messageContent] = parts;
                     setMessages((prev) => [...prev, { player: null, text: messageContent, sender: "system" }]);
-                }
-            };
-
+                }            };
+    
             socketRef.current.onclose = () => {
                 console.log('WebSocket disconnected');
             };
         }
     }, []);
+
+    // --- useEffect for Timer ---
+    useEffect(() => {
+        let timerInterval;
+        if (timeLeft > 0) {
+            timerInterval = setInterval(() => {
+                setTimeLeft((prevTime) => prevTime - 1);
+            }, 1000); // Decrement every 1000ms (1 second)
+        } else {
+            // When timer reaches 0, send "gameover" message
+            if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+                socketRef.current.send("gameover|timeout|Game Over! Negotiation timed out."); // Use consistent format
+            }
+        }
+
+        // Cleanup function: clear the interval when the component unmounts or timeLeft changes
+        return () => clearInterval(timerInterval);
+    }, [timeLeft, socketRef]);
+
+
 
     const sendMessage = () => {
         if (messageInput.trim() && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -131,6 +190,11 @@ function App() {
 
     const handleOffer = () => {
         setIsOfferModalOpen(true);
+        // Initialize modal input fields with current offer values (or defaults)
+        setModalSalary(currentSalaryOffer !== null ? currentSalaryOffer : '');
+        setModalBonus(currentBonusOffer !== null ? currentBonusOffer : '');
+        setModalRemoteDays(currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : '');
+
     };
 
     const handleObjectives = () => {
@@ -139,25 +203,42 @@ function App() {
 
     const handleSubmitOffer = () => {
         if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-            socketRef.current.send(`offer:${offerAmount}`);
+            // --- Send offer to backend with all three values ---
+            const offerMessage = `offer:${modalSalary},${modalBonus},${modalRemoteDays}`;
+            socketRef.current.send(offerMessage);
         }
 
         setIsOfferModalOpen(false);
-        setOfferAmount('');
+        // No need to reset individual offer states here; they're managed by the modal
+
     };
 
     const handleCancelOffer = () => {
         setIsOfferModalOpen(false);
-        setOfferAmount('');
+        // No need to reset individual offer states here; they're managed by the modal
     };
+
     const handleCloseObjectives = () => {
         setIsObjectivesModalOpen(false);
     }
+
+    // --- Helper function to format time ---
+    const formatTime = (seconds) => {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+    };
+
     return (
         <div className="chat-container">
             <h1>NegoWars (MVP)</h1>
 
-            {/* --- Current Offer Display (NEW) --- */}
+            {/* --- Display Timer --- */}
+            <div className="round-info">
+                <p>Time Left: {formatTime(timeLeft)}</p>
+            </div>
+
+            {/* --- Current Offer Display --- */}
             <div className="current-offer">
                 <h2>Current Offer</h2>
                 <p>Base Salary: ${currentSalaryOffer !== null ? currentSalaryOffer.toLocaleString() : "N/A"}</p>
@@ -169,7 +250,11 @@ function App() {
                 {messages.map((msg, index) => (
                     <div key={index} className={`message ${msg.sender === 'me' ? 'my-message' : msg.sender === 'system' ? 'system-message' : 'other-message'}`}>
                         {msg.sender !== "system" && (
-                            <span className="message-player">Player {msg.player}: </span>
+                            <span className="message-player">
+                                {msg.sender === 'me' ? 
+                                    playerRole.charAt(0).toUpperCase() + playerRole.slice(1) : 
+                                    msg.role}: 
+                            </span>
                         )}
                         <span className="message-text">{msg.text}</span>
                     </div>
@@ -180,7 +265,11 @@ function App() {
                     type="text"
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          sendMessage();
+                        }
+                      }}
                     className="message-input"
                 />
                 <button onClick={sendMessage} className="send-button">Send</button>
@@ -195,12 +284,28 @@ function App() {
                 <div className="modal-overlay">
                     <div className="modal">
                         <h2>Make an Offer</h2>
-                        <label htmlFor="offerAmount">Salary Offer:</label>
+                        <label htmlFor="modalSalary">Base Salary:</label>
                         <input
                             type="number"
-                            id="offerAmount"
-                            value={offerAmount}
-                            onChange={(e) => setOfferAmount(e.target.value)}
+                            id="modalSalary"
+                            value={modalSalary}
+                            onChange={(e) => setModalSalary(e.target.value)}
+                            className="modal-input"
+                        />
+                        <label htmlFor="modalBonus">Sign-On Bonus:</label>
+                        <input
+                            type="number"
+                            id="modalBonus"
+                            value={modalBonus}
+                            onChange={(e) => setModalBonus(e.target.value)}
+                            className="modal-input"
+                        />
+                        <label htmlFor="modalRemoteDays">Remote Work Days:</label>
+                        <input
+                            type="number"
+                            id="modalRemoteDays"
+                            value={modalRemoteDays}
+                            onChange={(e) => setModalRemoteDays(e.target.value)}
                             className="modal-input"
                         />
                         <div className="modal-buttons">
@@ -215,7 +320,7 @@ function App() {
                 <div className="modal-overlay">
                     <div className="modal">
                         <h2>Objectives</h2>
-                        {playerRole === "candidate" && (
+                        {playerRole === "Candidate" && (
                             <div>
                                 <h3>Public Objectives:</h3>
                                 <ul>
@@ -228,7 +333,7 @@ function App() {
                                 <p>Bonus: {hiddenObjective.bonus}</p>
                             </div>
                         )}
-                        {playerRole === "hr" && (
+                        {playerRole === "HR" && (
                             <div>
                                 <h3>Public Objectives:</h3>
                                 <ul>

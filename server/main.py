@@ -1,7 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
-import random  # Import the random module
+import random
 
 app = FastAPI()
 
@@ -21,6 +21,7 @@ app.add_middleware(
 
 connected_clients = []  # List to store client info (websocket and player number)
 player_counter = 1  # Counter to assign player numbers
+# No more MAX_ROUNDS
 
 
 @app.get("/")
@@ -30,24 +31,27 @@ async def root():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     global player_counter
+    global connected_clients #Need to add this, else, you will get error.
 
     await websocket.accept()
 
     # Assign a player number and store client info
     player_number = player_counter
     player_counter += 1
-    client_info = {"websocket": websocket, "player": player_number}
+    client_info = {"websocket": websocket, "player": player_number}  # No more 'round'
     connected_clients.append(client_info)
     print(f"Client connected: {websocket.client}, Player {player_number}")
 
     # Determine the role (Candidate or HR) based on player number
-    role = "candidate" if player_number % 2 != 0 else "hr" #  Odd numbers are Candidate, even are HR
+    role = "Candidate" if player_number % 2 != 0 else "HR"
 
     # Send initial message with player number to the client
     await websocket.send_text(f"init|{player_number}")
 
     # Send the role to the client
-    await websocket.send_text(f"role|{role}") # NEW: Send role
+    await websocket.send_text(f"role|{role}")
+
+    # No more initial "newround" message
 
     try:
         while True:
@@ -58,7 +62,6 @@ async def websocket_endpoint(websocket: WebSocket):
             if data.startswith("offer:"):
                 offer_amount = data.split(":")[1]
                 message_id = str(uuid.uuid4())
-
                 # Broadcast the offer to all clients
                 for client in connected_clients:
                     await client["websocket"].send_text(f"offer|{message_id}|{player_number}|Offer: ${offer_amount}")
@@ -68,6 +71,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 message_id = str(uuid.uuid4())
                 for client in connected_clients:
                     await client["websocket"].send_text(f"gameover|{message_id}|Game Over!")
+                connected_clients = []  # Clear connected clients (end game)
+                player_counter = 1 # Reset
 
             # --- Handle Regular Chat Messages ---
             else:
