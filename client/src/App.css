@@ -150,3 +150,18 @@
     background-color: #da190b; /* darker Red */
     color: white;
 }
+
+.current-offer {
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-bottom: 20px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+}
+
+.current-offer h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1.2em;
+  color: #333;
+}
