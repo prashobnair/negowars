@@ -67,6 +67,14 @@ function App() {
     // --- State for storing the selected hidden objective ---
     const [hiddenObjective, setHiddenObjective] = useState(null);
 
+    // --- NEW: State for Game Over Modal ---
+    const [isGameOverModalOpen, setIsGameOverModalOpen] = useState(false);
+    const [gameOverOutcome, setGameOverOutcome] = useState("");
+
+    // --- Handler for closing the Game Over modal ---
+    const handleCloseGameOver = () => {
+        setIsGameOverModalOpen(false);
+    };
 
     // --- useEffect for WebSocket Connection ---
     useEffect(() => {
@@ -148,6 +156,9 @@ function App() {
                 } else if (messageType === "gameover") {
                     const [_, messageId, messageContent] = parts;
                     setMessages((prev) => [...prev, { player: null, text: messageContent, sender: "system" }]);
+                    // Set the outcome message and open the Game Over modal
+                    setGameOverOutcome(messageContent);
+                    setIsGameOverModalOpen(true);
                 }            };
     
             socketRef.current.onclose = () => {
@@ -349,6 +360,33 @@ function App() {
                         )}
                         <div className="modal-buttons">
                             <button onClick={handleCloseObjectives} className="modal-button modal-cancel">Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- NEW: Game Over Modal --- */}
+            {isGameOverModalOpen && (
+                <div className="modal-overlay">
+                    <div className="modal">
+                        <h2>Game Over</h2>
+                        <p>
+                            {gameOverOutcome.toLowerCase().includes("timed out")
+                                ? "Negotiation Timed Out"
+                                : "Negotiation Successful"}
+                        </p>
+                        { !gameOverOutcome.toLowerCase().includes("timed out") && (
+                            <div>
+                                <h3>Final Agreed Terms:</h3>
+                                <p>Base Salary: ${currentSalaryOffer !== null ? currentSalaryOffer.toLocaleString() : "N/A"}</p>
+                                <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
+                                <p>Remote Work Days: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
+                            </div>
+                        )}
+                        <h3>Scores:</h3>
+                        <p>(Placeholder for scores - TBD)</p>
+                        <div className="modal-buttons">
+                            <button onClick={handleCloseGameOver} className="modal-button modal-submit">Close</button>
                         </div>
                     </div>
                 </div>
