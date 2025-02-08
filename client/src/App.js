@@ -11,6 +11,8 @@ function App() {
     const socketRef = useRef(null);
     const myPlayerNumberRef = useRef(null);
     const [playerRole, setPlayerRole] = useState(null);
+    const [isGameOverModalOpen, setIsGameOverModalOpen] = useState(false);
+    const [gameOverMessage, setGameOverMessage] = useState(null);
 
     // --- State for Current Offer ---
     const [currentSalaryOffer, setCurrentSalaryOffer] = useState(null);
@@ -24,6 +26,11 @@ function App() {
 
     // --- State for Timer ---
     const [timeLeft, setTimeLeft] = useState(7 * 60); // 7 minutes in seconds
+
+    // --- Game Over State ---
+    const [candidateScore, setCandidateScore] = useState(null);
+    const [hrScore, setHrScore] = useState(null);
+    const [opponentHiddenObjective, setOpponentHiddenObjective] = useState(null); // e.g., "debt", "quick"
 
 
     // --- Define Objectives (Hardcoded for MVP) ---
@@ -67,64 +74,38 @@ function App() {
     // --- State for storing the selected hidden objective ---
     const [hiddenObjective, setHiddenObjective] = useState(null);
 
-    // --- NEW: State for Game Over Modal ---
-    const [isGameOverModalOpen, setIsGameOverModalOpen] = useState(false);
-    const [gameOverOutcome, setGameOverOutcome] = useState("");
-
-    // --- Handler for closing the Game Over modal ---
-    const handleCloseGameOver = () => {
-        setIsGameOverModalOpen(false);
-    };
 
     // --- useEffect for WebSocket Connection ---
     useEffect(() => {
         if (!socketRef.current) {
             socketRef.current = new WebSocket('ws://localhost:8000/ws');
-    
+
             socketRef.current.onopen = () => {
                 console.log('WebSocket connected');
             };
-    
+
             socketRef.current.onmessage = (event) => {
-                console.log('Received event:', event); // Keep this log
-                console.log('Received event.data:', event.data); // Keep this log
                 const parts = event.data.split("|");
-                console.log('Parts:', parts); // Keep this log.
                 const messageType = parts[0];
-                console.log("messageType:", messageType); // Keep
-    
-                if (messageType.startsWith("init")) {
+
+                if (messageType === "init") {
                     const playerNumber = parts[1];
                     setMyPlayerNumber(playerNumber);
                     myPlayerNumberRef.current = playerNumber;
+                    
                 } else if (messageType === "role") {
                     const role = parts[1];
-                    console.log("Received role:", role); // ADD THIS LOG
                     setPlayerRole(role);
-    
-                    const hiddenObjectives = role === "Candidate" ? candidateHiddenObjectives : hrHiddenObjectives;
+
+                    const hiddenObjectives = role === "candidate" ? candidateHiddenObjectives : hrHiddenObjectives;
                     const randomIndex = Math.floor(Math.random() * hiddenObjectives.length);
                     setHiddenObjective(hiddenObjectives[randomIndex]);
-    
-                    // --- Add "You are..." message HERE ---
-                    setMessages((prev) => [
-                        ...prev, 
-                        { player: myPlayerNumberRef.current, text: `You are ${role.charAt(0).toUpperCase() + role.slice(1)}`, sender: "system" }
-                    ]);
-                    
+
+                    setMessages((prev) => [...prev, { player: myPlayerNumberRef.current, text: `You are ${role.charAt(0).toUpperCase() + role.slice(1)}`, sender: "system" }]);
+
                 } else if (messageType === "ack") {
-                    // For testing, also add ack messages as chat messages
-                    const sender = parts[2];
-                    const text = parts.slice(3).join("|");
-                    setMessages((prev) => [
-                        ...prev,
-                        { 
-                            player: sender, 
-                            text: text, 
-                            sender: sender === myPlayerNumberRef.current ? 'me' : 'other',
-                            role: sender % 2 !== 0 ? 'Candidate' : 'HR'  // Add role based on player number
-                        }
-                    ]);
+                    const [_, messageId, playerNumber, messageContent] = parts;
+                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
                 } else if (messageType === "msg") {
                     const sender = parts[2];
                     const text = parts.slice(3).join("|");
@@ -135,32 +116,53 @@ function App() {
                             player: sender,
                             text: text,
                             sender: sender === myPlayerNumberRef.current ? 'me' : 'other',
-                            role: Number(sender) % 2 !== 0 ? 'Candidate' : 'HR',
+                            role: Number(sender) % 2 !== 0 ? 'Candidate' : 'Hr',
                         }
                     ]);
                 }  else if (messageType === "offer") {
                     const [_, messageId, playerNumber, messageContent] = parts;
-                    const offerPrefix = "Offer: $";
-                    if (messageContent.startsWith(offerPrefix)) {
-                        // Remove the prefix and split by commas
-                        const offerParts = messageContent.slice(offerPrefix.length).split(",");
-                        if (offerParts.length === 3) {
-                            const salary = parseInt(offerParts[0], 10);
-                            const bonus = parseInt(offerParts[1], 10);
-                            const remoteDays = parseInt(offerParts[2], 10);
-                            if (!isNaN(salary)) setCurrentSalaryOffer(salary);
-                            if (!isNaN(bonus)) setCurrentBonusOffer(bonus);
-                            if (!isNaN(remoteDays)) setCurrentRemoteDaysOffer(remoteDays);
+                    const sender = playerNumber === myPlayerNumberRef.current ? "me" : "other";
+                    
+                    // --- Parse Offer Details ---
+                    const offerParts = messageContent.split(",");
+                    const salaryPart = offerParts.find(part => part.trim().startsWith("Offer:"));
+                    const bonusPart = offerParts.find(part => part.trim().startsWith("Bonus:"));
+                    const remoteDaysPart = offerParts.find(part => part.trim().startsWith("Remote Days:"));
+
+                    if (salaryPart) {
+                        const salaryString = salaryPart.split(":")[1].replace(/[^0-9]/g, '');
+                        const salary = parseInt(salaryString, 10);
+                        if (!isNaN(salary)) {
+                            setCurrentSalaryOffer(salary);
+                        }
+                    }
+
+                    if (bonusPart) {
+                        const bonusString = bonusPart.split(":")[1].replace(/[^0-9]/g, '');
+                        const bonus = parseInt(bonusString, 10);
+                        if (!isNaN(bonus)) {
+                            setCurrentBonusOffer(bonus);
+                        }
+                    }
+
+                    if (remoteDaysPart) {
+                        const remoteDaysString = remoteDaysPart.split(":")[1].replace(/[^0-9]/g, '');
+                        const remoteDays = parseInt(remoteDaysString, 10);
+                        if (!isNaN(remoteDays)) {
+                            setCurrentRemoteDaysOffer(remoteDays);
                         }
                     }
                 } else if (messageType === "gameover") {
-                    const [_, messageId, messageContent] = parts;
-                    setMessages((prev) => [...prev, { player: null, text: messageContent, sender: "system" }]);
-                    // Set the outcome message and open the Game Over modal
-                    setGameOverOutcome(messageContent);
-                    setIsGameOverModalOpen(true);
-                }            };
-    
+                  const [_, messageId, outcome, candidateScore, hrScore, candidateHidden, hrHidden] = parts;
+                    setGameOverMessage(outcome);
+                    setCandidateScore(candidateScore);
+                    setHrScore(hrScore);
+                    setOpponentHiddenObjective(playerRole === "candidate" ? hrHidden : candidateHidden);
+                    setIsGameOverModalOpen(true); // Open the modal
+
+                }
+            };
+
             socketRef.current.onclose = () => {
                 console.log('WebSocket disconnected');
             };
@@ -233,6 +235,9 @@ function App() {
     const handleCloseObjectives = () => {
         setIsObjectivesModalOpen(false);
     }
+    const handleCloseGameOver = () => {
+        setIsGameOverModalOpen(false);
+    }
 
     // --- Helper function to format time ---
     const formatTime = (seconds) => {
@@ -263,10 +268,10 @@ function App() {
                     <div key={index} className={`message ${msg.sender === 'me' ? 'my-message' : msg.sender === 'system' ? 'system-message' : 'other-message'}`}>
                         {msg.sender !== "system" && (
                             <span className="message-player">
-                                {msg.sender === 'me' ? 
-                                    playerRole.charAt(0).toUpperCase() + playerRole.slice(1) : 
-                                    msg.role}: 
-                            </span>
+                            {msg.sender === 'me' ? 
+                                playerRole.charAt(0).toUpperCase() + playerRole.slice(1) : 
+                                msg.role}: 
+                        </span>
                         )}
                         <span className="message-text">{msg.text}</span>
                     </div>
@@ -332,7 +337,7 @@ function App() {
                 <div className="modal-overlay">
                     <div className="modal">
                         <h2>Objectives</h2>
-                        {playerRole === "Candidate" && (
+                        {playerRole === "candidate" && (
                             <div>
                                 <h3>Public Objectives:</h3>
                                 <ul>
@@ -345,7 +350,7 @@ function App() {
                                 <p>Bonus: {hiddenObjective.bonus}</p>
                             </div>
                         )}
-                        {playerRole === "HR" && (
+                        {playerRole === "hr" && (
                             <div>
                                 <h3>Public Objectives:</h3>
                                 <ul>
@@ -364,29 +369,29 @@ function App() {
                     </div>
                 </div>
             )}
-
-            {/* --- NEW: Game Over Modal --- */}
+            {/* --- Game Over Modal --- */}
             {isGameOverModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal">
                         <h2>Game Over</h2>
-                        <p>
-                            {gameOverOutcome.toLowerCase().includes("timed out")
-                                ? "Negotiation Timed Out"
-                                : "Negotiation Successful"}
-                        </p>
-                        { !gameOverOutcome.toLowerCase().includes("timed out") && (
-                            <div>
-                                <h3>Final Agreed Terms:</h3>
+                        <p>{gameOverMessage}</p>
+                        {/* Display Scores */}
+                        <p>Candidate Score: {candidateScore !== null ? candidateScore : "N/A"}</p>
+                        <p>HR Score: {hrScore !== null ? hrScore : "N/A"}</p>
+
+                        {/* Display Opponent's Hidden Objective (if game ended successfully)*/}
+                        {gameOverMessage && !gameOverMessage.includes("timed out") && (
+                            <>
+                                <h3>Final Terms:</h3>
                                 <p>Base Salary: ${currentSalaryOffer !== null ? currentSalaryOffer.toLocaleString() : "N/A"}</p>
                                 <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
                                 <p>Remote Work Days: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
-                            </div>
+                                <h3>Opponent's Hidden Objective:</h3>
+                                <p>{opponentHiddenObjective}</p>
+                            </>
                         )}
-                        <h3>Scores:</h3>
-                        <p>(Placeholder for scores - TBD)</p>
                         <div className="modal-buttons">
-                            <button onClick={handleCloseGameOver} className="modal-button modal-submit">Close</button>
+                            <button onClick={handleCloseGameOver} className="modal-button modal-cancel">Close</button>
                         </div>
                     </div>
                 </div>
