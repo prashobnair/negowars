@@ -7,8 +7,9 @@ function App() {
     const [myPlayerNumber, setMyPlayerNumber] = useState(null);
     const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
     const [offerAmount, setOfferAmount] = useState('');
+    const [isObjectivesModalOpen, setIsObjectivesModalOpen] = useState(false); // NEW: State for Objectives modal
     const socketRef = useRef(null);
-    const myPlayerNumberRef = useRef(null); // Use a ref to store myPlayerNumber
+    const myPlayerNumberRef = useRef(null);
 
     useEffect(() => {
         if (!socketRef.current) {
@@ -25,7 +26,7 @@ function App() {
                 if (messageType.startsWith("init")) {
                     const playerNumber = messageType.split(":")[1];
                     setMyPlayerNumber(playerNumber);
-                    myPlayerNumberRef.current = playerNumber; // Keep the ref updated
+                    myPlayerNumberRef.current = playerNumber;
                     setMessages((prev) => [...prev, { player: playerNumber, text: `You are Player ${playerNumber}`, sender: "system" }]);
                 } else if (messageType === "ack") {
                     const [_, messageId, playerNumber, messageContent] = parts;
@@ -36,7 +37,7 @@ function App() {
                 } else if (messageType === "offer") {
                     const [_, messageId, playerNumber, messageContent] = parts;
                     const sender = playerNumber === myPlayerNumberRef.current ? "me" : "other";
-                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender }]);
+                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: sender }]);
                 } else if (messageType === "gameover") {
                     const [_, messageId, messageContent] = parts;
                     setMessages((prev) => [...prev, { player: null, text: messageContent, sender: "system" }]);
@@ -67,7 +68,8 @@ function App() {
     };
 
     const handleObjectives = () => {
-        console.log("Objectives button clicked");
+        // --- Open the Objectives modal ---
+        setIsObjectivesModalOpen(true);
     };
 
     const handleSubmitOffer = () => {
@@ -83,6 +85,11 @@ function App() {
         setIsOfferModalOpen(false);
         setOfferAmount('');
     };
+
+    // --- Handler for closing the Objectives modal ---
+    const handleCloseObjectives = () => {
+        setIsObjectivesModalOpen(false);
+    }
 
     return (
         <div className="chat-container">
@@ -113,6 +120,7 @@ function App() {
                 <button onClick={handleObjectives} className="action-button">Objectives</button>
             </div>
 
+            {/* --- Offer Modal (Existing) --- */}
             {isOfferModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal">
@@ -128,6 +136,19 @@ function App() {
                         <div className="modal-buttons">
                             <button onClick={handleSubmitOffer} className="modal-button modal-submit">Submit</button>
                             <button onClick={handleCancelOffer} className="modal-button modal-cancel">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- Objectives Modal (NEW) --- */}
+            {isObjectivesModalOpen && (
+                <div className="modal-overlay">
+                    <div className="modal">
+                        <h2>Objectives</h2>
+                        <p>Placeholder for objectives...</p> {/* Placeholder content */}
+                        <div className="modal-buttons">
+                            <button onClick={handleCloseObjectives} className="modal-button modal-cancel">Close</button>
                         </div>
                     </div>
                 </div>
