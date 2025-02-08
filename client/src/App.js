@@ -10,7 +10,12 @@ function App() {
     const [isObjectivesModalOpen, setIsObjectivesModalOpen] = useState(false);
     const socketRef = useRef(null);
     const myPlayerNumberRef = useRef(null);
-    const [playerRole, setPlayerRole] = useState(null); // NEW: Store player's role
+    const [playerRole, setPlayerRole] = useState(null);
+
+    // --- NEW: State for Current Offer ---
+    const [currentSalaryOffer, setCurrentSalaryOffer] = useState(null);
+    const [currentBonusOffer, setCurrentBonusOffer] = useState(null);
+    const [currentRemoteDaysOffer, setCurrentRemoteDaysOffer] = useState(null);
 
     // --- Define Objectives (Hardcoded for MVP) ---
     const candidatePublicObjectives = [
@@ -66,20 +71,17 @@ function App() {
                 const messageType = parts[0];
 
                 if (messageType.startsWith("init")) {
-                    const playerNumber = parts[1];
+                    const playerNumber = parts[1]; // Correctly get playerNumber from parts[1]
                     setMyPlayerNumber(playerNumber);
-                    myPlayerNumberRef.current = playerNumber;
-                    // Don't add "You are Player X" message here yet
-                } else if (messageType === "role") { // NEW: Handle "role" message
+                    myPlayerNumberRef.current = playerNumber; // Keep the ref updated
+                } else if (messageType === "role") {
                     const role = parts[1];
-                    setPlayerRole(role); // Store the role ("candidate" or "hr")
+                    setPlayerRole(role);
 
-                    // Randomly select a hidden objective based on the role
                     const hiddenObjectives = role === "candidate" ? candidateHiddenObjectives : hrHiddenObjectives;
                     const randomIndex = Math.floor(Math.random() * hiddenObjectives.length);
                     setHiddenObjective(hiddenObjectives[randomIndex]);
 
-                    // Add "You are Candidate/HR" message *after* receiving role:
                     setMessages((prev) => [...prev, { player: myPlayerNumberRef.current, text: `You are ${role.charAt(0).toUpperCase() + role.slice(1)}`, sender: "system" }]);
 
                 } else if (messageType === "ack") {
@@ -92,6 +94,16 @@ function App() {
                     const [_, messageId, playerNumber, messageContent] = parts;
                     const sender = playerNumber === myPlayerNumberRef.current ? "me" : "other";
                     setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: sender }]);
+
+                    // --- Update Current Offer State ---
+                    const offerDetails = messageContent.split(": "); // Split "Offer: $XX,XXX"
+                    if (offerDetails.length === 2 && offerDetails[0] === "Offer") {
+                      const offerValueString = offerDetails[1].replace(/[^0-9]/g, ''); // Remove non-numeric
+                      const offerValue = parseInt(offerValueString, 10);
+                      if (!isNaN(offerValue)) { //check if offer value is a valid number
+                        setCurrentSalaryOffer(offerValue);
+                      }
+                    }
                 } else if (messageType === "gameover") {
                     const [_, messageId, messageContent] = parts;
                     setMessages((prev) => [...prev, { player: null, text: messageContent, sender: "system" }]);
@@ -144,6 +156,15 @@ function App() {
     return (
         <div className="chat-container">
             <h1>NegoWars (MVP)</h1>
+
+            {/* --- Current Offer Display (NEW) --- */}
+            <div className="current-offer">
+                <h2>Current Offer</h2>
+                <p>Base Salary: ${currentSalaryOffer !== null ? currentSalaryOffer.toLocaleString() : "N/A"}</p>
+                <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
+                <p>Remote Work Days: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
+            </div>
+
             <div className="message-list">
                 {messages.map((msg, index) => (
                     <div key={index} className={`message ${msg.sender === 'me' ? 'my-message' : msg.sender === 'system' ? 'system-message' : 'other-message'}`}>
