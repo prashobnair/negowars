@@ -1,6 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uuid
+import random  # Import the random module
 
 app = FastAPI()
 
@@ -39,8 +40,14 @@ async def websocket_endpoint(websocket: WebSocket):
     connected_clients.append(client_info)
     print(f"Client connected: {websocket.client}, Player {player_number}")
 
+    # Determine the role (Candidate or HR) based on player number
+    role = "candidate" if player_number % 2 != 0 else "hr" #  Odd numbers are Candidate, even are HR
+
     # Send initial message with player number to the client
-    await websocket.send_text(f"init:{player_number}")
+    await websocket.send_text(f"init|{player_number}")
+
+    # Send the role to the client
+    await websocket.send_text(f"role|{role}") # NEW: Send role
 
     try:
         while True:
@@ -55,6 +62,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 # Broadcast the offer to all clients
                 for client in connected_clients:
                     await client["websocket"].send_text(f"offer|{message_id}|{player_number}|Offer: ${offer_amount}")
+
+            # --- Handle "accept" Message ---
+            elif data == "accept":
+                message_id = str(uuid.uuid4())
+                for client in connected_clients:
+                    await client["websocket"].send_text(f"gameover|{message_id}|Game Over!")
 
             # --- Handle Regular Chat Messages ---
             else:

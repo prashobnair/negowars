@@ -7,9 +7,51 @@ function App() {
     const [myPlayerNumber, setMyPlayerNumber] = useState(null);
     const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
     const [offerAmount, setOfferAmount] = useState('');
-    const [isObjectivesModalOpen, setIsObjectivesModalOpen] = useState(false); // NEW: State for Objectives modal
+    const [isObjectivesModalOpen, setIsObjectivesModalOpen] = useState(false);
     const socketRef = useRef(null);
     const myPlayerNumberRef = useRef(null);
+    const [playerRole, setPlayerRole] = useState(null); // NEW: Store player's role
+
+    // --- Define Objectives (Hardcoded for MVP) ---
+    const candidatePublicObjectives = [
+        "Achieve a base salary of at least $65,000 (ideal: $75,000+).",
+        "Secure a sign-on bonus of at least $5,000 (ideal: $8,000+).",
+        "Obtain at least 2 remote work days per week.",
+    ];
+    const candidateHiddenObjectives = [
+      {
+        id: "debt",
+        description: "Secret Debt: You have a pressing personal debt.  Secure a sign-on bonus of at least $7,000 for a bonus.",
+        bonus: "+30 points if achieved",
+      },
+      {
+        id: "growth",
+        description: "Career Growth: You are prioritizing long-term career growth. (Placeholder)",
+        bonus: "+20 points (Placeholder)",
+      },
+    ];
+
+    const hrPublicObjectives = [
+        "Keep the base salary at or below $70,000.",
+        "Limit the sign-on bonus to a maximum of $8,000.",
+        "Minimize remote work days (ideally 0-1).",
+        "Keep total compensation (salary + bonus) at or below $80,000."
+    ];
+    const hrHiddenObjectives = [
+        {
+          id: "quick",
+          description: "Quick Close: Finalize the deal within 3 rounds",
+          bonus: "+30 points if achieved",
+        },
+        {
+          id: "budget",
+          description: "Budget Hero: Keep the total compensation below $76000",
+          bonus: "+30 points if achieved",
+        },
+      ];
+
+    // --- State for storing the selected hidden objective ---
+    const [hiddenObjective, setHiddenObjective] = useState(null);
 
     useEffect(() => {
         if (!socketRef.current) {
@@ -24,17 +66,29 @@ function App() {
                 const messageType = parts[0];
 
                 if (messageType.startsWith("init")) {
-                    const playerNumber = messageType.split(":")[1];
+                    const playerNumber = parts[1];
                     setMyPlayerNumber(playerNumber);
                     myPlayerNumberRef.current = playerNumber;
-                    setMessages((prev) => [...prev, { player: playerNumber, text: `You are Player ${playerNumber}`, sender: "system" }]);
+                    // Don't add "You are Player X" message here yet
+                } else if (messageType === "role") { // NEW: Handle "role" message
+                    const role = parts[1];
+                    setPlayerRole(role); // Store the role ("candidate" or "hr")
+
+                    // Randomly select a hidden objective based on the role
+                    const hiddenObjectives = role === "candidate" ? candidateHiddenObjectives : hrHiddenObjectives;
+                    const randomIndex = Math.floor(Math.random() * hiddenObjectives.length);
+                    setHiddenObjective(hiddenObjectives[randomIndex]);
+
+                    // Add "You are Candidate/HR" message *after* receiving role:
+                    setMessages((prev) => [...prev, { player: myPlayerNumberRef.current, text: `You are ${role.charAt(0).toUpperCase() + role.slice(1)}`, sender: "system" }]);
+
                 } else if (messageType === "ack") {
                     const [_, messageId, playerNumber, messageContent] = parts;
                     setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
                 } else if (messageType === "msg") {
                     const [_, messageId, playerNumber, messageContent] = parts;
                     setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "other" }]);
-                } else if (messageType === "offer") {
+                }  else if (messageType === "offer") {
                     const [_, messageId, playerNumber, messageContent] = parts;
                     const sender = playerNumber === myPlayerNumberRef.current ? "me" : "other";
                     setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: sender }]);
@@ -68,7 +122,6 @@ function App() {
     };
 
     const handleObjectives = () => {
-        // --- Open the Objectives modal ---
         setIsObjectivesModalOpen(true);
     };
 
@@ -85,12 +138,9 @@ function App() {
         setIsOfferModalOpen(false);
         setOfferAmount('');
     };
-
-    // --- Handler for closing the Objectives modal ---
     const handleCloseObjectives = () => {
         setIsObjectivesModalOpen(false);
     }
-
     return (
         <div className="chat-container">
             <h1>NegoWars (MVP)</h1>
@@ -120,7 +170,6 @@ function App() {
                 <button onClick={handleObjectives} className="action-button">Objectives</button>
             </div>
 
-            {/* --- Offer Modal (Existing) --- */}
             {isOfferModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal">
@@ -141,12 +190,36 @@ function App() {
                 </div>
             )}
 
-            {/* --- Objectives Modal (NEW) --- */}
             {isObjectivesModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal">
                         <h2>Objectives</h2>
-                        <p>Placeholder for objectives...</p> {/* Placeholder content */}
+                        {playerRole === "candidate" && (
+                            <div>
+                                <h3>Public Objectives:</h3>
+                                <ul>
+                                    {candidatePublicObjectives.map((objective, index) => (
+                                        <li key={index}>{objective}</li>
+                                    ))}
+                                </ul>
+                                <h3>Hidden Objective:</h3>
+                                <p>{hiddenObjective.description}</p>
+                                <p>Bonus: {hiddenObjective.bonus}</p>
+                            </div>
+                        )}
+                        {playerRole === "hr" && (
+                            <div>
+                                <h3>Public Objectives:</h3>
+                                <ul>
+                                    {hrPublicObjectives.map((objective, index) => (
+                                        <li key={index}>{objective}</li>
+                                    ))}
+                                </ul>
+                                <h3>Hidden Objective:</h3>
+                                <p>{hiddenObjective.description}</p>
+                                <p>Bonus: {hiddenObjective.bonus}</p>
+                            </div>
+                        )}
                         <div className="modal-buttons">
                             <button onClick={handleCloseObjectives} className="modal-button modal-cancel">Close</button>
                         </div>
