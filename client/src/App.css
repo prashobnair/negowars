@@ -1,38 +1,67 @@
 .chat-container {
-  width: 800px;
-  margin: 20px auto;
-  border: 1px solid #ccc;
-  padding: 20px;
+  max-width: 800px;
+  height: 100vh;
+  margin: 0 auto;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  height: 600px;
+  gap: 0.75rem;
+}
+
+h1 {
+  margin: 0;
+  padding: 0.5rem 0;
+}
+
+.round-info {
+  margin: 0;
+  padding: 0.5rem 0;
+}
+
+.current-offer {
+  background-color: #f5f5f5;
+  padding: 1rem;
+  border-radius: 8px;
+  margin: 0;
+}
+
+.current-offer h2 {
+  margin: 0 0 0.5rem 0;
+}
+
+.current-offer p {
+  margin: 0.25rem 0;
 }
 
 .message-list {
-  height: 600px;
-  overflow-y: scroll;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem;
+  margin: 0;
   border: 1px solid #ccc;
-  padding: 10px;
+  border-radius: 8px;
+  max-height: calc(100vh - 350px);
+  background-color: white;
 }
 
 .message {
-  padding: 8px 12px;
-  margin-bottom: 5px;
-  border-radius: 5px;
-  clear: both; /* Ensure messages stack vertically */
+  clear: both;
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
+  max-width: 70%;
 }
 
 .my-message {
   background-color: #DCF8C6; /* Light green for own messages */
   float: right; /* Align own messages to the right */
-  max-width: 70%; /* Limit message width */
-
 }
 
 .other-message {
   background-color: #f0f0f0; /* Light gray for other player's messages */
   float: left; /* Align other messages to the left */
-  max-width: 70%; /* Limit message width */
 }
 
 .message-player {
@@ -42,43 +71,50 @@
 
 .input-area {
   display: flex;
+  gap: 0.5rem;
+  margin: 0;
+  width: 100%;
 }
 
 .message-input {
-  flex-grow: 1;
-  padding: 8px;
+  flex: 1;
+  padding: 0.5rem;
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
   border: 1px solid #ccc;
-  border-radius: 5px;
-  margin-right: 10px;
+  border-radius: 8px;
+  min-height: 38px;
 }
 
 .send-button {
-  padding: 8px 15px;
-  background-color: #4CAF50; /* Green */
-  color: white;
+  padding: 0.5rem 1rem;
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
+  background-color: #007bff;
+  color: white;
   cursor: pointer;
-}
-
-.send-button:hover {
-  background-color: #3e8e41;
+  min-width: 80px;
+  min-height: 38px;
 }
 
 .action-buttons {
-  margin-top: 10px;
   display: flex;
-  justify-content: space-around; /* Distribute buttons evenly */
+  gap: 0.5rem;
+  margin: 0 0 1.5rem 0;
+  width: 100%;
+  padding-bottom: 1.5rem;
 }
 
 .action-button {
-  padding: 10px 20px;
-  background-color: #007bff; /* Blue */
-  color: white;
+  flex: 1;
+  padding: 0.5rem;
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
+  background-color: #007bff;
+  color: white;
   cursor: pointer;
-  font-size: 16px;
+  min-height: 38px;
 }
 
 .action-button:hover {
@@ -86,91 +122,116 @@
 }
 
 .modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000; /* Ensure it's on top of other content */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem;
 }
 
 .modal {
-    background-color: white;
-    padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    width: 400px;
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  width: min(90%, 500px);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal h2 {
-    margin-top: 0;
-    margin-bottom: 20px;
+  font-size: clamp(1.2rem, 3vw, 1.5rem);
+  margin-top: 0;
+}
+
+.modal label {
+  display: block;
+  margin: 0.5rem 0;
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
 }
 
 .modal-input {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-sizing: border-box; /* Include padding and border in the element's total width */
+  width: 100%;
+  padding: 0.5rem;
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 1rem;
 }
 
 .modal-buttons {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 20px;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 
 .modal-button {
-    padding: 10px 15px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
+  padding: 0.5rem 1rem;
+  font-size: clamp(0.9rem, 2.5vw, 1rem);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .modal-submit {
-    background-color: #4CAF50; /* Green */
-    color: white;
-}
-.modal-submit:hover {
-    background-color: #46a049; /* darker Green */
-    color: white;
+  background-color: #28a745;
+  color: white;
 }
 
 .modal-cancel {
-    background-color: #f44336; /* Red */
-    color: white;
-}
-.modal-cancel:hover {
-    background-color: #da190b; /* darker Red */
-    color: white;
-}
-
-.current-offer {
-  border: 1px solid #ddd;
-  padding: 10px;
-  margin-bottom: 20px;
-  background-color: #f9f9f9;
-  border-radius: 5px;
-}
-
-.current-offer h2 {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 1.2em;
-  color: #333;
+  background-color: #dc3545;
+  color: white;
 }
 
 .system-message {
   color: #555;
   font-style: italic;
   background-color: #f1f1f1;
-  padding: 5px;
-  margin: 5px 0;
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  border-radius: 8px;
+  clear: both;
+  width: 100%;
+  text-align: center;
+}
+
+/* Media queries for different screen sizes */
+@media (max-width: 768px) {
+  .chat-container {
+    padding: 1rem;
+  }
+  
+  .message-list {
+    max-height: calc(100vh - 400px);
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+  
+  .input-area {
+    flex-direction: column;
+  }
+  
+  .send-button {
+    width: 100%;
+  }
+}
+
+@media (max-height: 600px) {
+  .message-list {
+    max-height: calc(100vh - 350px);
+  }
+  
+  h1 {
+    font-size: 1.5rem;
+    margin: 0;
+  }
 }
