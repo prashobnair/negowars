@@ -45,11 +45,6 @@ function App() {
         description: "Secret Debt: You have a pressing personal debt.  Secure a sign-on bonus of at least $7,000 for a bonus.",
         bonus: "+30 points if achieved",
       },
-      {
-        id: "growth",
-        description: "Career Growth: You are prioritizing long-term career growth. (Placeholder)",
-        bonus: "+20 points (Placeholder)",
-      },
     ];
 
     const hrPrimaryObjectives = [
@@ -59,11 +54,6 @@ function App() {
         "Keep total compensation (salary + bonus) at or below $80,000."
     ];
     const hrBonusObjectives = [
-        {
-          id: "quick",
-          description: "Quick Close: Finalize the deal within 3 minutes",
-          bonus: "+30 points if achieved",
-        },
         {
           id: "budget",
           description: "Budget Hero: Keep the total compensation below $76000",
@@ -216,15 +206,18 @@ function App() {
     };
 
     const handleSubmitOffer = () => {
+        // Add validation
+        if (!modalSalary || !modalBonus || !modalRemoteDays) {
+            alert("Please fill in all offer fields with valid numbers");
+            return;
+        }
+
         if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-            // --- Send offer to backend with all three values ---
             const offerMessage = `offer:${modalSalary},${modalBonus},${modalRemoteDays}`;
             socketRef.current.send(offerMessage);
         }
 
         setIsOfferModalOpen(false);
-        // No need to reset individual offer states here; they're managed by the modal
-
     };
 
     const handleCancelOffer = () => {
