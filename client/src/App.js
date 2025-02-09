@@ -67,118 +67,126 @@ function App() {
 
     // --- useEffect for WebSocket Connection ---
     useEffect(() => {
-        if (!socketRef.current) {
-            socketRef.current = new WebSocket('ws://localhost:8000/ws');
-            
-            socketRef.current.onopen = () => {
-                console.log('WebSocket connected');
-            };
-
-            socketRef.current.onmessage = (event) => {
-                const parts = event.data.split("|");
-                const messageType = parts[0];
-
-                if (messageType === "init") {
-                    const playerNumber = parts[1];
-                    const roomId = parts[2];
-                    setMyPlayerNumber(playerNumber);
-                    setRoomId(roomId);
-                    myPlayerNumberRef.current = playerNumber;
-                    
-                } else if (messageType === "role") {
-                    const role = parts[1];
-                    setPlayerRole(role);
-
-                    const bonusObjectives = role === "candidate" ? candidateBonusObjectives : hrBonusObjectives;
-                    const randomIndex = Math.floor(Math.random() * bonusObjectives.length);
-                    setBonusObjective(bonusObjectives[randomIndex]);
-
-                    setMessages((prev) => [...prev, { player: myPlayerNumberRef.current, text: `You are ${role.charAt(0).toUpperCase() + role.slice(1)}`, sender: "system" }]);
-
-                } else if (messageType === "ack") {
-                    const [_, messageId, playerNumber, messageContent] = parts;
-                    setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
-                } else if (messageType === "msg") {
-                    const sender = parts[2];
-                    const text = parts.slice(3).join("|");
-                    console.log("Received chat message from:", sender, "text:", text);
-                    setMessages((prev) => [
-                        ...prev,
-                        {
-                            player: sender,
-                            text: text,
-                            sender: sender === myPlayerNumberRef.current ? 'me' : 'other',
-                            role: Number(sender) % 2 !== 0 ? 'Candidate' : 'Hr',
-                        }
-                    ]);
-                }  else if (messageType === "offer") {
-                    const [_, messageId, playerNumber, messageContent] = parts;
-                    const sender = playerNumber === myPlayerNumberRef.current ? "me" : "other";
-                    
-                    // --- Parse Offer Details ---
-                    const offerParts = messageContent.split(",");
-                    const salaryPart = offerParts.find(part => part.trim().startsWith("Offer:"));
-                    const bonusPart = offerParts.find(part => part.trim().startsWith("Bonus:"));
-                    const remoteDaysPart = offerParts.find(part => part.trim().startsWith("Remote Days:"));
-
-                    if (salaryPart) {
-                        const salaryString = salaryPart.split(":")[1].replace(/[^0-9]/g, '');
-                        const salary = parseInt(salaryString, 10);
-                        if (!isNaN(salary)) {
-                            setCurrentSalaryOffer(salary);
-                        }
-                    }
-
-                    if (bonusPart) {
-                        const bonusString = bonusPart.split(":")[1].replace(/[^0-9]/g, '');
-                        const bonus = parseInt(bonusString, 10);
-                        if (!isNaN(bonus)) {
-                            setCurrentBonusOffer(bonus);
-                        }
-                    }
-
-                    if (remoteDaysPart) {
-                        const remoteDaysString = remoteDaysPart.split(":")[1].replace(/[^0-9]/g, '');
-                        const remoteDays = parseInt(remoteDaysString, 10);
-                        if (!isNaN(remoteDays)) {
-                            setCurrentRemoteDaysOffer(remoteDays);
-                        }
-                    }
-                } else if (messageType === "gameover") {
-                    const [_, messageId, outcome, candidateScore, hrScore, candidateBonus, hrBonus] = parts;
-                    console.log("Game Over Message Parts:", {
-                        outcome,
-                        candidateScore,
-                        hrScore,
-                        candidateBonus,
-                        hrBonus,
-                        playerRole
-                    });
-                    
-                    // Make sure we're using the correct playerRole
-                    const currentRole = playerRole || (Number(myPlayerNumberRef.current) % 2 !== 0 ? "candidate" : "hr");
-                    
-                    setGameOverMessage(outcome);
-                    setCandidateScore(candidateScore);
-                    setHrScore(hrScore);
-                    setOpponentBonusObjective(currentRole === "candidate" ? hrBonus : candidateBonus);
-                    setIsGameOverModalOpen(true);
-                    
-                    // Only reset the modal input states
-                    setModalSalary('');
-                    setModalBonus('');
-                    setModalRemoteDays('');
-                } else if (messageType === "error") {
-                    const errorMessage = parts.slice(1).join("|");
-                    alert(errorMessage);  // Or handle the error in a more user-friendly way
-                }
-            };
-
-            socketRef.current.onclose = () => {
-                console.log('WebSocket disconnected');
-            };
+        // Prevent multiple connections
+        if (socketRef.current) {
+            return;
         }
-    }, []);
+
+        socketRef.current = new WebSocket('ws://localhost:8000/ws');
+        
+        socketRef.current.onopen = () => {
+            console.log('WebSocket connected');
+        };
+
+        socketRef.current.onmessage = (event) => {
+            const parts = event.data.split("|");
+            const messageType = parts[0];
+
+            if (messageType === "init") {
+                const playerNumber = parts[1];
+                const roomId = parts[2];
+                setMyPlayerNumber(playerNumber);
+                setRoomId(roomId);
+                myPlayerNumberRef.current = playerNumber;
+                
+            } else if (messageType === "role") {
+                const role = parts[1];
+                setPlayerRole(role);
+
+                const bonusObjectives = role === "candidate" ? candidateBonusObjectives : hrBonusObjectives;
+                const randomIndex = Math.floor(Math.random() * bonusObjectives.length);
+                setBonusObjective(bonusObjectives[randomIndex]);
+
+                setMessages((prev) => [...prev, { player: myPlayerNumberRef.current, text: `You are ${role.charAt(0).toUpperCase() + role.slice(1)}`, sender: "system" }]);
+
+            } else if (messageType === "ack") {
+                const [_, messageId, playerNumber, messageContent] = parts;
+                setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
+            } else if (messageType === "msg") {
+                const sender = parts[2];
+                const text = parts.slice(3).join("|");
+                console.log("Received chat message from:", sender, "text:", text);
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        player: sender,
+                        text: text,
+                        sender: sender === myPlayerNumberRef.current ? 'me' : 'other',
+                        role: Number(sender) % 2 !== 0 ? 'Candidate' : 'Hr',
+                    }
+                ]);
+            }  else if (messageType === "offer") {
+                const [_, messageId, playerNumber, messageContent] = parts;
+                const sender = playerNumber === myPlayerNumberRef.current ? "me" : "other";
+                
+                // --- Parse Offer Details ---
+                const offerParts = messageContent.split(",");
+                const salaryPart = offerParts.find(part => part.trim().startsWith("Offer:"));
+                const bonusPart = offerParts.find(part => part.trim().startsWith("Bonus:"));
+                const remoteDaysPart = offerParts.find(part => part.trim().startsWith("Remote Days:"));
+
+                if (salaryPart) {
+                    const salaryString = salaryPart.split(":")[1].replace(/[^0-9]/g, '');
+                    const salary = parseInt(salaryString, 10);
+                    if (!isNaN(salary)) {
+                        setCurrentSalaryOffer(salary);
+                    }
+                }
+
+                if (bonusPart) {
+                    const bonusString = bonusPart.split(":")[1].replace(/[^0-9]/g, '');
+                    const bonus = parseInt(bonusString, 10);
+                    if (!isNaN(bonus)) {
+                        setCurrentBonusOffer(bonus);
+                    }
+                }
+
+                if (remoteDaysPart) {
+                    const remoteDaysString = remoteDaysPart.split(":")[1].replace(/[^0-9]/g, '');
+                    const remoteDays = parseInt(remoteDaysString, 10);
+                    if (!isNaN(remoteDays)) {
+                        setCurrentRemoteDaysOffer(remoteDays);
+                    }
+                }
+            } else if (messageType === "gameover") {
+                const [_, messageId, outcome, candidateScore, hrScore, candidateBonus, hrBonus] = parts;
+                console.log("Game Over Message Parts:", {
+                    outcome,
+                    candidateScore,
+                    hrScore,
+                    candidateBonus,
+                    hrBonus,
+                    playerRole
+                });
+                
+                // Make sure we're using the correct playerRole
+                const currentRole = playerRole || (Number(myPlayerNumberRef.current) % 2 !== 0 ? "candidate" : "hr");
+                
+                setGameOverMessage(outcome);
+                setCandidateScore(candidateScore);
+                setHrScore(hrScore);
+                setOpponentBonusObjective(currentRole === "candidate" ? hrBonus : candidateBonus);
+                setIsGameOverModalOpen(true);
+                
+                // Only reset the modal input states
+                setModalSalary('');
+                setModalBonus('');
+                setModalRemoteDays('');
+            } else if (messageType === "error") {
+                const errorMessage = parts.slice(1).join("|");
+                alert(errorMessage);  // Or handle the error in a more user-friendly way
+            }
+        };
+
+        socketRef.current.onclose = (event) => {
+            console.log('WebSocket disconnected:', event.code, event.reason);
+            socketRef.current = null;
+        };
+
+        socketRef.current.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    }, []); // Empty dependency array
 
     // --- useEffect for Timer ---
     useEffect(() => {
@@ -326,16 +334,6 @@ function App() {
         // Reset messages
         setMessages([]);
     };
-
-    // Keep the original cleanup for component unmount
-    useEffect(() => {
-        return () => {
-            if (socketRef.current) {
-                socketRef.current.close();
-                socketRef.current = null;
-            }
-        };
-    }, []);
 
     return (
         <div className="chat-container">
