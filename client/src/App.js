@@ -5,6 +5,7 @@ function App() {
     const [messages, setMessages] = useState([]);
     const [messageInput, setMessageInput] = useState('');
     const [myPlayerNumber, setMyPlayerNumber] = useState(null);
+    const [roomId, setRoomId] = useState(null);
     const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
     const [offerAmount, setOfferAmount] = useState('');
     const [isObjectivesModalOpen, setIsObjectivesModalOpen] = useState(false);
@@ -79,7 +80,9 @@ function App() {
 
                 if (messageType === "init") {
                     const playerNumber = parts[1];
+                    const roomId = parts[2];
                     setMyPlayerNumber(playerNumber);
+                    setRoomId(roomId);
                     myPlayerNumberRef.current = playerNumber;
                     
                 } else if (messageType === "role") {
@@ -337,6 +340,9 @@ function App() {
     return (
         <div className="chat-container">
             <h1>NegoWars (MVP)</h1>
+            <div className="room-info">
+                <p>Room #{roomId || "..."}</p>
+            </div>
 
             {/* --- Display Timer --- */}
             <div className="round-info">
