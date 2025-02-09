@@ -14,6 +14,7 @@ function App() {
     const [playerRole, setPlayerRole] = useState(null);
     const [isGameOverModalOpen, setIsGameOverModalOpen] = useState(false);
     const [gameOverMessage, setGameOverMessage] = useState(null);
+    const [lastOfferSender, setLastOfferSender] = useState(null);
 
     // --- State for Current Offer ---
     const [currentSalaryOffer, setCurrentSalaryOffer] = useState(null);
@@ -82,6 +83,8 @@ function App() {
             const parts = event.data.split("|");
             const messageType = parts[0];
 
+            console.log("Received message:", { messageType, parts });
+
             if (messageType === "init") {
                 const playerNumber = parts[1];
                 const roomId = parts[2];
@@ -117,37 +120,47 @@ function App() {
                 ]);
             }  else if (messageType === "offer") {
                 const [_, messageId, playerNumber, messageContent] = parts;
-                const sender = playerNumber === myPlayerNumberRef.current ? "me" : "other";
+                console.log("Offer received:", { messageId, playerNumber, messageContent });
+
+                setLastOfferSender(() => playerNumber); // Use functional update
                 
                 // --- Parse Offer Details ---
-                const offerParts = messageContent.split(",");
-                const salaryPart = offerParts.find(part => part.trim().startsWith("Offer:"));
-                const bonusPart = offerParts.find(part => part.trim().startsWith("Bonus:"));
-                const remoteDaysPart = offerParts.find(part => part.trim().startsWith("Remote Days:"));
+                const offerParts = messageContent.split(",").map(part => part.split(":"));
+                const offerDetails = Object.fromEntries(offerParts);
+                
+                const salary = offerDetails.salary;
+                const bonus = offerDetails.bonus;
+                const remote_days = offerDetails.remote_days;
 
-                if (salaryPart) {
-                    const salaryString = salaryPart.split(":")[1].replace(/[^0-9]/g, '');
-                    const salary = parseInt(salaryString, 10);
-                    if (!isNaN(salary)) {
-                        setCurrentSalaryOffer(salary);
-                    }
+                console.log("Parsed offer details:", { salary, bonus, remote_days });
+                
+                // Convert to numbers and update state
+                const parsedSalary = parseInt(salary, 10);
+                const parsedBonus = parseInt(bonus, 10);
+                const parsedRemoteDays = parseInt(remote_days, 10);
+                
+                console.log("Parsed offer values:", { parsedSalary, parsedBonus, parsedRemoteDays });
+                
+                if (!isNaN(parsedSalary)) {
+                    setCurrentSalaryOffer(parsedSalary);
                 }
-
-                if (bonusPart) {
-                    const bonusString = bonusPart.split(":")[1].replace(/[^0-9]/g, '');
-                    const bonus = parseInt(bonusString, 10);
-                    if (!isNaN(bonus)) {
-                        setCurrentBonusOffer(bonus);
-                    }
+                if (!isNaN(parsedBonus)) {
+                    setCurrentBonusOffer(parsedBonus);
                 }
-
-                if (remoteDaysPart) {
-                    const remoteDaysString = remoteDaysPart.split(":")[1].replace(/[^0-9]/g, '');
-                    const remoteDays = parseInt(remoteDaysString, 10);
-                    if (!isNaN(remoteDays)) {
-                        setCurrentRemoteDaysOffer(remoteDays);
-                    }
+                if (!isNaN(parsedRemoteDays)) {
+                    setCurrentRemoteDaysOffer(parsedRemoteDays);
                 }
+                
+                // Add a message to the chat
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        player: playerNumber,
+                        text: `New offer: $${parsedSalary.toLocaleString()} salary, $${parsedBonus.toLocaleString()} bonus, ${parsedRemoteDays} remote days`,
+                        sender: playerNumber === myPlayerNumberRef.current ? 'me' : 'other',
+                        role: Number(playerNumber) % 2 !== 0 ? 'Candidate' : 'Hr',
+                    }
+                ]);
             } else if (messageType === "gameover") {
                 const [_, messageId, outcome, candidateScore, hrScore, candidateBonus, hrBonus] = parts;
                 console.log("Game Over Message Parts:", {
@@ -233,35 +246,61 @@ function App() {
     };
 
     const handleSubmitOffer = () => {
+        console.log("Submit offer clicked");
+        console.log("Current values:", { modalSalary, modalBonus, modalRemoteDays });
+
         // Input validation
         const salary = parseInt(modalSalary);
         const bonus = parseInt(modalBonus);
-        const remoteDays = parseInt(modalRemoteDays);
+        const remote_days = parseInt(modalRemoteDays);
+
+        console.log("Parsed values:", { salary, bonus, remote_days });
 
         // Validate salary
         if (isNaN(salary) || salary < 0 || salary > 1000000 || !Number.isInteger(salary)) {
+            console.log("Salary validation failed");
             alert("Base salary must be a whole number between $0 and $1,000,000");
             return;
         }
 
         // Validate bonus
         if (isNaN(bonus) || bonus < 0 || bonus > 10000 || !Number.isInteger(bonus)) {
+            console.log("Bonus validation failed");
             alert("Sign-on bonus must be a whole number between $0 and $10,000");
             return;
         }
 
         // Validate remote days
-        if (isNaN(remoteDays) || remoteDays < 0 || remoteDays > 5 || !Number.isInteger(remoteDays)) {
+        if (isNaN(remote_days) || remote_days < 0 || remote_days > 5 || !Number.isInteger(remote_days)) {
+            console.log("Remote days validation failed");
             alert("Remote work days must be a whole number between 0 and 5");
             return;
         }
 
+        console.log("All validations passed");
+        console.log("WebSocket state:", {
+            exists: !!socketRef.current,
+            readyState: socketRef.current?.readyState,
+            OPEN: WebSocket.OPEN
+        });
+
         if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-            const offerMessage = `offer:${salary},${bonus},${remoteDays}`;
+            const offerMessage = `offer:${salary},${bonus},${remote_days}`;
+            console.log("Sending offer message:", offerMessage);
             socketRef.current.send(offerMessage);
+            console.log("Offer message sent");
+
+            // Update local state when sending offer
+            setCurrentSalaryOffer(salary);
+            setCurrentBonusOffer(bonus);
+            setCurrentRemoteDaysOffer(remote_days);
+            setLastOfferSender(myPlayerNumberRef.current);
+        } else {
+            console.log("WebSocket not ready");
         }
 
         setIsOfferModalOpen(false);
+        console.log("Offer modal closed");
     };
 
     const handleCancelOffer = () => {
@@ -384,7 +423,15 @@ function App() {
                 <button onClick={sendMessage} className="send-button">Send</button>
             </div>
             <div className="action-buttons">
-                <button onClick={handleAccept} className="action-button">Accept</button>
+                <button 
+                    onClick={handleAccept} 
+                    className="action-button"
+                    disabled={!currentSalaryOffer || // Disable if no offer exists
+                             !lastOfferSender || // Disable if no offer has been made
+                             lastOfferSender === myPlayerNumberRef.current} // Disable for the player who made the offer
+                >
+                    Accept
+                </button>
                 <button onClick={handleOffer} className="action-button">Offer</button>
                 <button onClick={handleObjectives} className="action-button">Objectives</button>
             </div>

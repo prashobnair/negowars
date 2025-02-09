@@ -400,7 +400,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         message_id = str(uuid.uuid4())
                         for client in room["players"]:  # Broadcast to all players in the *room*
                             if client["is_active"]: # Check for active
-                                await client["websocket"].send_text(f"offer|{message_id}|{current_client['player']}|{room_id}|Offer: ${salary},Bonus: ${bonus},Remote Days: {remote_days}") #Added room id
+                                await client["websocket"].send_text(f"offer|{message_id}|{current_client['player']}|salary:{salary},bonus:{bonus},remote_days:{remote_days}")
 
                     except (ValueError, IndexError) as e:
                         logger.error(f"Invalid offer format: {e}")
