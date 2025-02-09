@@ -25,7 +25,7 @@ function App() {
     const [modalRemoteDays, setModalRemoteDays] = useState('');
 
     // --- State for Timer ---
-    const [timeLeft, setTimeLeft] = useState(0.2 * 60); // 7 minutes in seconds
+    const [timeLeft, setTimeLeft] = useState(7 * 60); // 7 minutes in seconds
 
     // --- Game Over State ---
     const [candidateScore, setCandidateScore] = useState(null);
@@ -35,14 +35,14 @@ function App() {
 
     // --- Define Objectives (Hardcoded for MVP) ---
     const candidatePrimaryObjectives = [
-        "Achieve a base salary of at least $65,000 (ideal: $75,000+).",
-        "Secure a sign-on bonus of at least $5,000 (ideal: $8,000+).",
+        "Achieve a base salary of at least $65,000.",
+        "Secure a sign-on bonus of at least $5,000.",
         "Obtain at least 2 remote work days per week.",
     ];
     const candidateBonusObjectives = [
       {
         id: "debt",
-        description: "Secret Debt: You have a pressing personal debt.  Secure a sign-on bonus of at least $7,000 for a bonus.",
+        description: "Personal Debt: Secure a sign-on bonus of at least $7,000.",
         bonus: "+30 points if achieved",
       },
     ];
@@ -50,13 +50,12 @@ function App() {
     const hrPrimaryObjectives = [
         "Keep the base salary at or below $70,000.",
         "Limit the sign-on bonus to a maximum of $8,000.",
-        "Minimize remote work days (ideally 0-1).",
-        "Keep total compensation (salary + bonus) at or below $80,000."
+        "Limit remote work days to a maximum of 1 per week",
     ];
     const hrBonusObjectives = [
         {
           id: "budget",
-          description: "Budget Hero: Keep the total compensation below $76000",
+          description: "Budget Hero: Keep the total compensation (salary + bonus) below $76000",
           bonus: "+30 points if achieved",
         },
       ];
@@ -69,7 +68,7 @@ function App() {
     useEffect(() => {
         if (!socketRef.current) {
             socketRef.current = new WebSocket('ws://localhost:8000/ws');
-
+            
             socketRef.current.onopen = () => {
                 console.log('WebSocket connected');
             };
@@ -143,13 +142,32 @@ function App() {
                         }
                     }
                 } else if (messageType === "gameover") {
-                  const [_, messageId, outcome, candidateScore, hrScore, candidateBonus, hrBonus] = parts;
+                    const [_, messageId, outcome, candidateScore, hrScore, candidateBonus, hrBonus] = parts;
+                    console.log("Game Over Message Parts:", {
+                        outcome,
+                        candidateScore,
+                        hrScore,
+                        candidateBonus,
+                        hrBonus,
+                        playerRole
+                    });
+                    
+                    // Make sure we're using the correct playerRole
+                    const currentRole = playerRole || (Number(myPlayerNumberRef.current) % 2 !== 0 ? "candidate" : "hr");
+                    
                     setGameOverMessage(outcome);
                     setCandidateScore(candidateScore);
                     setHrScore(hrScore);
-                    setOpponentBonusObjective(playerRole === "candidate" ? hrBonus : candidateBonus);
-                    setIsGameOverModalOpen(true); // Open the modal
-
+                    setOpponentBonusObjective(currentRole === "candidate" ? hrBonus : candidateBonus);
+                    setIsGameOverModalOpen(true);
+                    
+                    // Only reset the modal input states
+                    setModalSalary('');
+                    setModalBonus('');
+                    setModalRemoteDays('');
+                } else if (messageType === "error") {
+                    const errorMessage = parts.slice(1).join("|");
+                    alert(errorMessage);  // Or handle the error in a more user-friendly way
                 }
             };
 
@@ -176,8 +194,6 @@ function App() {
         // Cleanup function: clear the interval when the component unmounts or timeLeft changes
         return () => clearInterval(timerInterval);
     }, [timeLeft, socketRef]);
-
-
 
     const sendMessage = () => {
         if (messageInput.trim() && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -206,14 +222,31 @@ function App() {
     };
 
     const handleSubmitOffer = () => {
-        // Add validation
-        if (!modalSalary || !modalBonus || !modalRemoteDays) {
-            alert("Please fill in all offer fields with valid numbers");
+        // Input validation
+        const salary = parseInt(modalSalary);
+        const bonus = parseInt(modalBonus);
+        const remoteDays = parseInt(modalRemoteDays);
+
+        // Validate salary
+        if (isNaN(salary) || salary < 0 || salary > 1000000 || !Number.isInteger(salary)) {
+            alert("Base salary must be a whole number between $0 and $1,000,000");
+            return;
+        }
+
+        // Validate bonus
+        if (isNaN(bonus) || bonus < 0 || bonus > 10000 || !Number.isInteger(bonus)) {
+            alert("Sign-on bonus must be a whole number between $0 and $10,000");
+            return;
+        }
+
+        // Validate remote days
+        if (isNaN(remoteDays) || remoteDays < 0 || remoteDays > 5 || !Number.isInteger(remoteDays)) {
+            alert("Remote work days must be a whole number between 0 and 5");
             return;
         }
 
         if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-            const offerMessage = `offer:${modalSalary},${modalBonus},${modalRemoteDays}`;
+            const offerMessage = `offer:${salary},${bonus},${remoteDays}`;
             socketRef.current.send(offerMessage);
         }
 
@@ -230,7 +263,8 @@ function App() {
     }
     const handleCloseGameOver = () => {
         setIsGameOverModalOpen(false);
-    }
+        resetGameState(); // Reset all states when modal is closed
+    };
 
     // --- Helper function to format time ---
     const formatTime = (seconds) => {
@@ -238,6 +272,67 @@ function App() {
         const remainingSeconds = seconds % 60;
         return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
     };
+
+    // Add these helper functions at the top level of the App component
+    const getBonusObjectiveDescription = (objectiveId, role) => {
+        console.log("Getting bonus objective description:", { objectiveId, role });
+        
+        if (!objectiveId) {
+            console.log("No objectiveId provided");
+            return "N/A";
+        }
+        
+        // Determine role if not provided
+        const currentRole = role || (Number(myPlayerNumberRef.current) % 2 !== 0 ? "candidate" : "hr");
+        
+        if (currentRole === "candidate") {
+            const hrObjective = hrBonusObjectives.find(obj => obj.id === objectiveId);
+            console.log("Found HR objective:", hrObjective);
+            return hrObjective ? hrObjective.description : "N/A";
+        } else if (currentRole === "hr") {
+            const candidateObjective = candidateBonusObjectives.find(obj => obj.id === objectiveId);
+            console.log("Found candidate objective:", candidateObjective);
+            return candidateObjective ? candidateObjective.description : "N/A";
+        }
+        return "N/A";
+    };
+
+    // Add this new function to reset game-related states
+    const resetGameState = () => {
+        // Reset current offer states
+        setCurrentSalaryOffer(null);
+        setCurrentBonusOffer(null);
+        setCurrentRemoteDaysOffer(null);
+        
+        // Reset offer modal states
+        setModalSalary('');
+        setModalBonus('');
+        setModalRemoteDays('');
+        
+        // Reset game over states
+        setGameOverMessage(null);
+        setCandidateScore(null);
+        setHrScore(null);
+        setOpponentBonusObjective(null);
+        
+        // Reset modals
+        setIsOfferModalOpen(false);
+        setIsObjectivesModalOpen(false);
+        setIsGameOverModalOpen(false);
+        
+        // Reset messages
+        setMessages([]);
+    };
+
+    // Keep the original cleanup for component unmount
+    useEffect(() => {
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.close();
+                socketRef.current = null;
+            }
+        };
+    }, []);
 
     return (
         <div className="chat-container">
@@ -253,7 +348,7 @@ function App() {
                 <h2>Current Offer</h2>
                 <p>Base Salary: ${currentSalaryOffer !== null ? currentSalaryOffer.toLocaleString() : "N/A"}</p>
                 <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
-                <p>Remote Work Days: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
+                <p>Remote Work Days Per Week: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
             </div>
 
             <div className="message-list">
@@ -310,7 +405,7 @@ function App() {
                             onChange={(e) => setModalBonus(e.target.value)}
                             className="modal-input"
                         />
-                        <label htmlFor="modalRemoteDays">Remote Work Days:</label>
+                        <label htmlFor="modalRemoteDays">Remote Work Days Per Week:</label>
                         <input
                             type="number"
                             id="modalRemoteDays"
@@ -380,7 +475,7 @@ function App() {
                                 <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
                                 <p>Remote Work Days: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
                                 <h3>Opponent's Bonus Objective:</h3>
-                                <p>{opponentBonusObjective}</p>
+                                <p>{getBonusObjectiveDescription(opponentBonusObjective, playerRole)}</p>
                             </>
                         )}
                         <div className="modal-buttons">

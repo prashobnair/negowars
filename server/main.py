@@ -26,6 +26,14 @@ app.add_middleware(
 connected_clients = []  # List to store client info (websocket and player number)
 player_counter = 1  # Counter to assign player numbers
 
+# Add these constants at the top of the file
+SALARY_MIN = 0
+SALARY_MAX = 1000000
+BONUS_MIN = 0
+BONUS_MAX = 10000
+REMOTE_DAYS_MIN = 0
+REMOTE_DAYS_MAX = 5
+
 # ---------- Scoring Configurations (Hardcoded for MVP) ----------
 # Candidate scoring configuration (can be customized per game)
 candidate_scoring_config = {
@@ -53,8 +61,7 @@ candidate_scoring_config = {
     },
     "bonus_objectives": {
         # Bonus objectives are keyed by an id. They may refer to a specific metric.
-        "debt": {"metric": "sign_on_bonus", "threshold": 7000, "bonus": 30},
-        
+        "debt": {"metric": "sign_on_bonus", "threshold": 7000, "bonus": 30}
     }
 }
 
@@ -257,6 +264,37 @@ def calculate_dynamic_hr_score(salary, bonus, remote_days, total_compensation, b
 
     return score
 
+def validate_offer(salary: int, bonus: int, remote_days: int) -> tuple[bool, str]:
+    """
+    Validates an offer's values.
+    Returns (is_valid: bool, error_message: str)
+    """
+    try:
+        # Validate salary
+        if not isinstance(salary, (int, float)) or not float(salary).is_integer():
+            return False, "Salary must be a whole number"
+        salary = int(salary)
+        if salary < SALARY_MIN or salary > SALARY_MAX:
+            return False, f"Salary must be between ${SALARY_MIN} and ${SALARY_MAX}"
+
+        # Validate bonus
+        if not isinstance(bonus, (int, float)) or not float(bonus).is_integer():
+            return False, "Bonus must be a whole number"
+        bonus = int(bonus)
+        if bonus < BONUS_MIN or bonus > BONUS_MAX:
+            return False, f"Bonus must be between ${BONUS_MIN} and ${BONUS_MAX}"
+
+        # Validate remote days
+        if not isinstance(remote_days, (int, float)) or not float(remote_days).is_integer():
+            return False, "Remote days must be a whole number"
+        remote_days = int(remote_days)
+        if remote_days < REMOTE_DAYS_MIN or remote_days > REMOTE_DAYS_MAX:
+            return False, f"Remote days must be between {REMOTE_DAYS_MIN} and {REMOTE_DAYS_MAX}"
+
+        return True, ""
+    except (ValueError, TypeError):
+        return False, "Invalid offer values"
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     global player_counter
@@ -269,194 +307,206 @@ async def websocket_endpoint(websocket: WebSocket):
     player_counter += 1
     client_info = {"websocket": websocket, "player": player_number, "role":None, "bonus_objective":None, "salary": None, "bonus":None, "remote_days": None}
     connected_clients.append(client_info)
-    print(f"Client connected: {websocket.client}, Player {player_number}")
-
-    # Determine the role (Candidate or HR) based on player number
-    role = "candidate" if player_number % 2 != 0 else "hr"
-    client_info["role"] = role #set the role here.
-
-    # --- Assign a *random* bonus objective ---
-    if role == "candidate":
-        bonus_objectives = ["debt"]  # The IDs of the candidate objectives
-    else:
-        bonus_objectives = ["budget"]  # The IDs of the HR objectives
-    chosen_objective = random.choice(bonus_objectives)
-    client_info["bonus_objective"] = chosen_objective
-
-
-    # Send initial message with player number to the client
-    await websocket.send_text(f"init|{player_number}")
-
-    # Send the role to the client
-    await websocket.send_text(f"role|{role}")
+    logger.info(f"Client connected: {websocket.client}, Player {player_number}")
 
     try:
+        # Determine the role (Candidate or HR) based on player number
+        role = "candidate" if player_number % 2 != 0 else "hr"
+        client_info["role"] = role
+
+        # Assign a random bonus objective
+        if role == "candidate":
+            bonus_objectives = ["debt"]
+        else:
+            bonus_objectives = ["budget"]
+        chosen_objective = random.choice(bonus_objectives)
+        client_info["bonus_objective"] = chosen_objective
+
+        # Send initial messages
+        await websocket.send_text(f"init|{player_number}")
+        await websocket.send_text(f"role|{role}")
+
         while True:
-            data = await websocket.receive_text()
-            print(f"Received from Player {player_number}: {data}")
+            try:
+                data = await websocket.receive_text()
+                logger.info(f"Received from Player {player_number}: {data}")
 
-            # --- Handle Offer Messages ---
-            if data.startswith("offer:"):
-                try:
-                    _, offer_data = data.split(":", 1)
-                    salary_str, bonus_str, remote_days_str = offer_data.split(",")
-                    
-                    # Validate that all values are present and can be converted to integers
-                    if not all([salary_str.strip(), bonus_str.strip(), remote_days_str.strip()]):
-                        continue  # Skip processing if any value is empty
-                    
-                    salary = int(salary_str)
-                    bonus = int(bonus_str)
-                    remote_days = int(remote_days_str)
-                    
-                    # Find the client info and update offer
-                    for client in connected_clients:
-                        if client["websocket"] == websocket:
-                            client["salary"] = salary
-                            client["bonus"] = bonus
-                            client["remote_days"] = remote_days
-                            break
-
-                    message_id = str(uuid.uuid4())
-
-                    # Broadcast the offer to all clients
-                    for client in connected_clients:
-                        await client["websocket"].send_text(f"offer|{message_id}|{player_number}|Offer: ${salary},Bonus: ${bonus},Remote Days: {remote_days}")
-                except (ValueError, IndexError) as e:
-                    print(f"Invalid offer format: {e}")
-                    continue
-
-            # --- Handle "accept" Message ---
-            elif data == "accept":
-                message_id = str(uuid.uuid4())
-                logger.info(f"Received 'accept' message. Message ID: {message_id}")
-                
-                # Find the client sending the "accept" message.  THIS IS CRUCIAL.
-                current_client = next((c for c in connected_clients if c["websocket"] == websocket), None)
-                if not current_client:
-                    logger.warning("Received 'accept' from unknown client.")
-                    continue  # Skip if client not found
-
-                # --- Calculate Scores (Before sending gameover) ---
-                candidate_score = 0
-                hr_score = 0
-                # Find the candidate and HR clients
-                candidate_client = next((c for c in connected_clients if c["role"] == "candidate"), None)
-                hr_client = next((c for c in connected_clients if c["role"] == "hr"), None)
-                logger.info(f"Candidate client: {candidate_client}")
-                logger.info(f"HR client: {hr_client}")
-
-                if candidate_client and hr_client: #Make sure clients are present
-                    logger.info("Both candidate and HR clients found.")
-                    
-                    # Determine the client who *made* the offer (the one who *didn't* accept)
-                    offering_client = candidate_client if current_client["role"] == "hr" else hr_client
-
-                    # Calculate scores only if negotiation was successful
-                    if offering_client["salary"] is not None:  # Check the *offering* client
-                        logger.info("Calculating scores...")
+                # Handle different message types
+                if data.startswith("offer:"):
+                    try:
+                        _, offer_data = data.split(":", 1)
+                        salary_str, bonus_str, remote_days_str = offer_data.split(",")
+                        
+                        # Convert to integers
                         try:
-                            candidate_score = calculate_dynamic_candidate_score(
-                                offering_client["salary"],  # Use offering client's values
-                                offering_client["bonus"],
-                                offering_client["remote_days"],
-                                candidate_client["bonus_objective"],  # Candidate's bonus objective
-                                True,
-                                candidate_scoring_config  # Pass the correct config!
-                            )
-                            logger.info(f"Candidate score calculated: {candidate_score}")
+                            salary = int(salary_str)
+                            bonus = int(bonus_str)
+                            remote_days = int(remote_days_str)
+                        except ValueError:
+                            await websocket.send_text(f"error|Invalid offer values: must be whole numbers")
+                            continue
 
-                            hr_score = calculate_dynamic_hr_score(
-                                offering_client["salary"], # Use offering client's values
-                                offering_client["bonus"],
-                                offering_client["remote_days"],
-                                offering_client["salary"] + offering_client["bonus"],  # Total compensation
-                                hr_client["bonus_objective"],  # HR's bonus objective
-                                True,
-                                hr_scoring_config  # Pass the correct config!
-                            )
-                            logger.info(f"HR score calculated: {hr_score}")
+                        # Validate the offer
+                        is_valid, error_message = validate_offer(salary, bonus, remote_days)
+                        if not is_valid:
+                            await websocket.send_text(f"error|{error_message}")
+                            continue
 
-                        except Exception as e:
-                            logger.exception(f"Error during score calculation: {e}")
-                    else:
-                        logger.info("No offer made yet, skipping score calculation.")
-                        candidate_score = 0  # Still initialize to 0
-                        hr_score = 0 # Initialize to avoid errors
-                else:
-                    logger.warning("Either candidate or HR client not found.")
-                    candidate_score = 0  # Still initialize to 0
+                        # Find the client info and update offer
+                        for client in connected_clients:
+                            if client["websocket"] == websocket:
+                                client["salary"] = salary
+                                client["bonus"] = bonus
+                                client["remote_days"] = remote_days
+                                break
+
+                        message_id = str(uuid.uuid4())
+
+                        # Broadcast the offer to all clients
+                        for client in connected_clients:
+                            await client["websocket"].send_text(f"offer|{message_id}|{player_number}|Offer: ${salary},Bonus: ${bonus},Remote Days: {remote_days}")
+                    except Exception as e:
+                        logger.error(f"Error processing offer: {e}")
+                        await websocket.send_text(f"error|Invalid offer format")
+                        continue
+
+                elif data == "accept":
+                    message_id = str(uuid.uuid4())
+                    logger.info(f"Received 'accept' message. Message ID: {message_id}")
+                    
+                    # Find the client sending the "accept" message.  THIS IS CRUCIAL.
+                    current_client = next((c for c in connected_clients if c["websocket"] == websocket), None)
+                    if not current_client:
+                        logger.warning("Received 'accept' from unknown client.")
+                        continue  # Skip if client not found
+
+                    # --- Calculate Scores (Before sending gameover) ---
+                    candidate_score = 0
+                    hr_score = 0
+                    # Find the candidate and HR clients
+                    candidate_client = next((c for c in connected_clients if c["role"] == "candidate"), None)
+                    hr_client = next((c for c in connected_clients if c["role"] == "hr"), None)
+                    logger.info(f"Candidate client: {candidate_client}")
+                    logger.info(f"HR client: {hr_client}")
+
+                    if candidate_client and hr_client: #Make sure clients are present
+                        logger.info("Both candidate and HR clients found.")
+                        
+                        # Determine the client who *made* the offer (the one who *didn't* accept)
+                        offering_client = candidate_client if current_client["role"] == "hr" else hr_client
+
+                        # Calculate scores only if negotiation was successful
+                        if offering_client["salary"] is not None:  # Check the *offering* client
+                            logger.info("Calculating scores...")
+                            try:
+                                candidate_score = calculate_dynamic_candidate_score(
+                                    offering_client["salary"],  # Use offering client's values
+                                    offering_client["bonus"],
+                                    offering_client["remote_days"],
+                                    candidate_client["bonus_objective"],  # Candidate's bonus objective
+                                    True,
+                                    candidate_scoring_config  # Pass the correct config!
+                                )
+                                logger.info(f"Candidate score calculated: {candidate_score}")
+
+                                hr_score = calculate_dynamic_hr_score(
+                                    offering_client["salary"], # Use offering client's values
+                                    offering_client["bonus"],
+                                    offering_client["remote_days"],
+                                    offering_client["salary"] + offering_client["bonus"],  # Total compensation
+                                    hr_client["bonus_objective"],  # HR's bonus objective
+                                    True,
+                                    hr_scoring_config  # Pass the correct config!
+                                )
+                                logger.info(f"HR score calculated: {hr_score}")
+
+                            except Exception as e:
+                                logger.exception(f"Error during score calculation: {e}")
+                        else:
+                            logger.info("No offer made yet, skipping score calculation.")
+                            candidate_score = 0  # Still initialize to 0
+                            hr_score = 0 # Initialize to avoid errors
+
+                        # Add these logging statements before constructing the gameover message
+                        logger.info(f"Candidate bonus objective: {candidate_client['bonus_objective']}")
+                        logger.info(f"HR bonus objective: {hr_client['bonus_objective']}")
+                        logger.info(f"Current player role: {current_client['role']}")
+
+                        # Construct the extended gameover message
+                        logger.info("Constructing gameover message...")
+                        gameover_message = f"gameover|{message_id}|Negotiation successful!|{candidate_score}|{hr_score}|{candidate_client['bonus_objective']}|{hr_client['bonus_objective']}"
+                        logger.info(f"Gameover message: {gameover_message}")
+                        for client in connected_clients:
+                            try:
+                                await client["websocket"].send_text(gameover_message)
+                                logger.info(f"Sent gameover message to: {client['player']}")
+                            except Exception as e:
+                                logger.exception(f"Error sending gameover message to client {client['player']}: {e}")
+                        connected_clients = []  # Clear connected clients (end game)
+                        player_counter = 1 # Reset
+
+                elif data.startswith("gameover|timeout"):
+                    message_id = str(uuid.uuid4())
+                    candidate_client = next((c for c in connected_clients if c["role"] == "candidate"), None)
+                    hr_client = next((c for c in connected_clients if c["role"] == "hr"), None)
+
+                    candidate_score = 0
                     hr_score = 0
 
-                # Construct the extended gameover message
-                logger.info("Constructing gameover message...")
-                gameover_message = f"gameover|{message_id}|Negotiation successful!|{candidate_score}|{hr_score}|{candidate_client['bonus_objective'] if candidate_client else 'N/A'}|{hr_client['bonus_objective'] if hr_client else 'N/A'}"
-                logger.info(f"Gameover message: {gameover_message}")
-                for client in connected_clients:
-                    try:
+                    if candidate_client and hr_client:
+                        # Calculate score. Negotiation failed, so pass success = False
+                        # Get safe values with defaults of 0
+                        salary = candidate_client.get("salary", 0) or 0
+                        bonus = candidate_client.get("bonus", 0) or 0
+                        remote_days = candidate_client.get("remote_days", 0) or 0
+                        total_comp = salary + bonus  # Calculate total compensation safely
+
+                        candidate_score = calculate_dynamic_candidate_score(
+                            salary,
+                            bonus,
+                            remote_days,
+                            candidate_client["bonus_objective"],
+                            False,
+                            candidate_scoring_config
+                        )
+                        hr_score = calculate_dynamic_hr_score(
+                            salary,
+                            bonus,
+                            remote_days,
+                            total_comp,  # Pass the safely calculated total compensation
+                            hr_client["bonus_objective"],
+                            False,
+                            hr_scoring_config
+                        )
+
+                    # Construct the extended gameover message for timeout
+                    gameover_message = f"gameover|{message_id}|Negotiation timed out!|{candidate_score}|{hr_score}|{candidate_client['bonus_objective']}|{hr_client['bonus_objective']}"
+
+                    for client in connected_clients:
                         await client["websocket"].send_text(gameover_message)
-                        logger.info(f"Sent gameover message to: {client['player']}")
-                    except Exception as e:
-                        logger.exception(f"Error sending gameover message to client {client['player']}: {e}")
-                connected_clients = []  # Clear connected clients (end game)
-                player_counter = 1 # Reset
-            # --- Handle Timeout ---
-            elif data.startswith("gameover|timeout"):
-                message_id = str(uuid.uuid4())
-                candidate_client = next((c for c in connected_clients if c["role"] == "candidate"), None)
-                hr_client = next((c for c in connected_clients if c["role"] == "hr"), None)
 
-                candidate_score = 0
-                hr_score = 0
+                    connected_clients = []
+                    player_counter = 1
 
-                if candidate_client and hr_client:
-                    # Calculate score. Negotiation failed, so pass success = False
-                    # Get safe values with defaults of 0
-                    salary = candidate_client.get("salary", 0) or 0
-                    bonus = candidate_client.get("bonus", 0) or 0
-                    remote_days = candidate_client.get("remote_days", 0) or 0
-                    total_comp = salary + bonus  # Calculate total compensation safely
+                else:
+                    # Regular chat message handling
+                    message_id = str(uuid.uuid4())
+                    await websocket.send_text(f"ack|{message_id}|{player_number}|{data}")
+                    for client in connected_clients:
+                        if client["websocket"] != websocket:
+                            await client["websocket"].send_text(f"msg|{message_id}|{player_number}|{data}")
 
-                    candidate_score = calculate_dynamic_candidate_score(
-                        salary,
-                        bonus,
-                        remote_days,
-                        candidate_client["bonus_objective"],
-                        False,
-                        candidate_scoring_config
-                    )
-                    hr_score = calculate_dynamic_hr_score(
-                        salary,
-                        bonus,
-                        remote_days,
-                        total_comp,  # Pass the safely calculated total compensation
-                        hr_client["bonus_objective"],
-                        False,
-                        hr_scoring_config
-                    )
-
-                # Construct the extended gameover message for timeout
-                gameover_message = f"gameover|{message_id}|Negotiation timed out!|{candidate_score}|{hr_score}|{candidate_client['bonus_objective'] if candidate_client else 'N/A'}|{hr_client['bonus_objective'] if hr_client else 'N/A'}"
-
-                for client in connected_clients:
-                    await client["websocket"].send_text(gameover_message)
-
-                connected_clients = []
-                player_counter = 1
-
-            # --- Handle Regular Chat Messages ---
-            else:
-                message_id = str(uuid.uuid4())
-                await websocket.send_text(f"ack|{message_id}|{player_number}|{data}")
-                for client in connected_clients:
-                    if client["websocket"] != websocket:
-                        await client["websocket"].send_text(f"msg|{message_id}|{player_number}|{data}")
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logger.error(f"Error processing message: {e}")
+                continue
 
     except WebSocketDisconnect:
-        print(f"Client disconnected: {websocket.client}, Player {player_number}")
-        for i, client in enumerate(connected_clients):
-            if client["websocket"] == websocket:
-                del connected_clients[i]
-                break
+        logger.info(f"Client disconnected: {websocket.client}, Player {player_number}")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
+    finally:
+        # Clean up the disconnected client
+        connected_clients = [c for c in connected_clients if c["websocket"] != websocket]
+        logger.info(f"Removed Player {player_number} from connected clients. Active clients: {len(connected_clients)}")
