@@ -30,16 +30,16 @@ function App() {
     // --- Game Over State ---
     const [candidateScore, setCandidateScore] = useState(null);
     const [hrScore, setHrScore] = useState(null);
-    const [opponentHiddenObjective, setOpponentHiddenObjective] = useState(null); // e.g., "debt", "quick"
+    const [opponentBonusObjective, setOpponentBonusObjective] = useState(null); // e.g., "debt", "quick"
 
 
     // --- Define Objectives (Hardcoded for MVP) ---
-    const candidatePublicObjectives = [
+    const candidatePrimaryObjectives = [
         "Achieve a base salary of at least $65,000 (ideal: $75,000+).",
         "Secure a sign-on bonus of at least $5,000 (ideal: $8,000+).",
         "Obtain at least 2 remote work days per week.",
     ];
-    const candidateHiddenObjectives = [
+    const candidateBonusObjectives = [
       {
         id: "debt",
         description: "Secret Debt: You have a pressing personal debt.  Secure a sign-on bonus of at least $7,000 for a bonus.",
@@ -52,13 +52,13 @@ function App() {
       },
     ];
 
-    const hrPublicObjectives = [
+    const hrPrimaryObjectives = [
         "Keep the base salary at or below $70,000.",
         "Limit the sign-on bonus to a maximum of $8,000.",
         "Minimize remote work days (ideally 0-1).",
         "Keep total compensation (salary + bonus) at or below $80,000."
     ];
-    const hrHiddenObjectives = [
+    const hrBonusObjectives = [
         {
           id: "quick",
           description: "Quick Close: Finalize the deal within 3 minutes",
@@ -71,8 +71,8 @@ function App() {
         },
       ];
 
-    // --- State for storing the selected hidden objective ---
-    const [hiddenObjective, setHiddenObjective] = useState(null);
+    // --- State for storing the selected bonus objective ---
+    const [bonusObjective, setBonusObjective] = useState(null);
 
 
     // --- useEffect for WebSocket Connection ---
@@ -97,9 +97,9 @@ function App() {
                     const role = parts[1];
                     setPlayerRole(role);
 
-                    const hiddenObjectives = role === "candidate" ? candidateHiddenObjectives : hrHiddenObjectives;
-                    const randomIndex = Math.floor(Math.random() * hiddenObjectives.length);
-                    setHiddenObjective(hiddenObjectives[randomIndex]);
+                    const bonusObjectives = role === "candidate" ? candidateBonusObjectives : hrBonusObjectives;
+                    const randomIndex = Math.floor(Math.random() * bonusObjectives.length);
+                    setBonusObjective(bonusObjectives[randomIndex]);
 
                     setMessages((prev) => [...prev, { player: myPlayerNumberRef.current, text: `You are ${role.charAt(0).toUpperCase() + role.slice(1)}`, sender: "system" }]);
 
@@ -153,11 +153,11 @@ function App() {
                         }
                     }
                 } else if (messageType === "gameover") {
-                  const [_, messageId, outcome, candidateScore, hrScore, candidateHidden, hrHidden] = parts;
+                  const [_, messageId, outcome, candidateScore, hrScore, candidateBonus, hrBonus] = parts;
                     setGameOverMessage(outcome);
                     setCandidateScore(candidateScore);
                     setHrScore(hrScore);
-                    setOpponentHiddenObjective(playerRole === "candidate" ? hrHidden : candidateHidden);
+                    setOpponentBonusObjective(playerRole === "candidate" ? hrBonus : candidateBonus);
                     setIsGameOverModalOpen(true); // Open the modal
 
                 }
@@ -336,31 +336,31 @@ function App() {
             {isObjectivesModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal">
-                        <h2>Objectives</h2>
+                        
                         {playerRole === "candidate" && (
                             <div>
-                                <h3>Public Objectives:</h3>
+                                <h3>Primary Objectives:</h3>
                                 <ul>
-                                    {candidatePublicObjectives.map((objective, index) => (
+                                    {candidatePrimaryObjectives.map((objective, index) => (
                                         <li key={index}>{objective}</li>
                                     ))}
                                 </ul>
-                                <h3>Hidden Objective:</h3>
-                                <p>{hiddenObjective.description}</p>
-                                <p>Bonus: {hiddenObjective.bonus}</p>
+                                <h3>Bonus Objective:</h3>
+                                <p>{bonusObjective.description}</p>
+                                <p>Bonus: {bonusObjective.bonus}</p>
                             </div>
                         )}
                         {playerRole === "hr" && (
                             <div>
-                                <h3>Public Objectives:</h3>
+                                <h3>Primary Objectives:</h3>
                                 <ul>
-                                    {hrPublicObjectives.map((objective, index) => (
+                                    {hrPrimaryObjectives.map((objective, index) => (
                                         <li key={index}>{objective}</li>
                                     ))}
                                 </ul>
-                                <h3>Hidden Objective:</h3>
-                                <p>{hiddenObjective.description}</p>
-                                <p>Bonus: {hiddenObjective.bonus}</p>
+                                <h3>Bonus Objective:</h3>
+                                <p>{bonusObjective.description}</p>
+                                <p>Bonus: {bonusObjective.bonus}</p>
                             </div>
                         )}
                         <div className="modal-buttons">
@@ -379,15 +379,15 @@ function App() {
                         <p>Candidate Score: {candidateScore !== null ? candidateScore : "N/A"}</p>
                         <p>HR Score: {hrScore !== null ? hrScore : "N/A"}</p>
 
-                        {/* Display Opponent's Hidden Objective (if game ended successfully)*/}
+                        {/* Display Opponent's Bonus Objective (if game ended successfully)*/}
                         {gameOverMessage && !gameOverMessage.includes("timed out") && (
                             <>
                                 <h3>Final Terms:</h3>
                                 <p>Base Salary: ${currentSalaryOffer !== null ? currentSalaryOffer.toLocaleString() : "N/A"}</p>
                                 <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
                                 <p>Remote Work Days: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
-                                <h3>Opponent's Hidden Objective:</h3>
-                                <p>{opponentHiddenObjective}</p>
+                                <h3>Opponent's Bonus Objective:</h3>
+                                <p>{opponentBonusObjective}</p>
                             </>
                         )}
                         <div className="modal-buttons">

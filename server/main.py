@@ -28,7 +28,7 @@ player_counter = 1  # Counter to assign player numbers
 async def root():
     return {"message": "Hello World"}
 
-def calculate_candidate_score(salary, bonus, remote_days, hidden_objective, success):
+def calculate_candidate_score(salary, bonus, remote_days, bonus_objective, success):
     score = 0
 
     # Base Salary
@@ -59,16 +59,16 @@ def calculate_candidate_score(salary, bonus, remote_days, hidden_objective, succ
     else:
         score -= 50
 
-    # Hidden Objective Bonus
-    if hidden_objective == "debt" and bonus >= 7000:
+    # Bonus Objective Bonus
+    if bonus_objective == "debt" and bonus >= 7000:
         score += 30
-    elif hidden_objective == "growth":
+    elif bonus_objective == "growth":
         score += 20  # Placeholder for now
 
     return score
 
 
-def calculate_hr_score(salary, bonus, remote_days, total_compensation, hidden_objective, success):
+def calculate_hr_score(salary, bonus, remote_days, total_compensation, bonus_objective, success):
     score = 0
 
     # Base Salary
@@ -107,10 +107,10 @@ def calculate_hr_score(salary, bonus, remote_days, total_compensation, hidden_ob
     else:
         score -= 50
 
-    # Hidden Objective Bonus
-    if hidden_objective == "quick" and success: # Assuming success is determined elsewhere
+    # Bonus Objective Bonus
+    if bonus_objective == "quick" and success: # Assuming success is determined elsewhere
         score += 30
-    elif hidden_objective == "budget" and total_compensation < 76000 :
+    elif bonus_objective == "budget" and total_compensation < 76000 :
         score += 30
 
     return score
@@ -125,7 +125,7 @@ async def websocket_endpoint(websocket: WebSocket):
     # Assign a player number and store client info
     player_number = player_counter
     player_counter += 1
-    client_info = {"websocket": websocket, "player": player_number, "role":None, "hidden_objective":None, "salary": None, "bonus":None, "remote_days": None}
+    client_info = {"websocket": websocket, "player": player_number, "role":None, "bonus_objective":None, "salary": None, "bonus":None, "remote_days": None}
     connected_clients.append(client_info)
     print(f"Client connected: {websocket.client}, Player {player_number}")
 
@@ -133,13 +133,13 @@ async def websocket_endpoint(websocket: WebSocket):
     role = "candidate" if player_number % 2 != 0 else "hr"
     client_info["role"] = role #set the role here.
 
-    # --- Assign a *random* hidden objective ---
+    # --- Assign a *random* bonus objective ---
     if role == "candidate":
-        hidden_objectives = ["debt", "growth"]  # The IDs of the candidate objectives
+        bonus_objectives = ["debt", "growth"]  # The IDs of the candidate objectives
     else:
-        hidden_objectives = ["quick", "budget"]  # The IDs of the HR objectives
-    chosen_objective = random.choice(hidden_objectives)
-    client_info["hidden_objective"] = chosen_objective
+        bonus_objectives = ["quick", "budget"]  # The IDs of the HR objectives
+    chosen_objective = random.choice(bonus_objectives)
+    client_info["bonus_objective"] = chosen_objective
 
 
     # Send initial message with player number to the client
@@ -189,7 +189,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         candidate_client["salary"],
                         candidate_client["bonus"],
                         candidate_client["remote_days"],
-                        candidate_client["hidden_objective"],
+                        candidate_client["bonus_objective"],
                         True  # Negotiation was successful
                     )
                     hr_score = calculate_hr_score(
@@ -197,12 +197,12 @@ async def websocket_endpoint(websocket: WebSocket):
                         candidate_client["bonus"], #bonus
                         candidate_client["remote_days"], #remote days
                         candidate_client["salary"] + candidate_client["bonus"],  # Total compensation
-                        hr_client["hidden_objective"],
+                        hr_client["bonus_objective"],
                         True  # Negotiation was successful
                     )
 
                 # Construct the extended gameover message
-                gameover_message = f"gameover|{message_id}|Negotiation successful!|{candidate_score}|{hr_score}|{candidate_client['hidden_objective'] if candidate_client else 'N/A'}|{hr_client['hidden_objective'] if hr_client else 'N/A'}"
+                gameover_message = f"gameover|{message_id}|Negotiation successful!|{candidate_score}|{hr_score}|{candidate_client['bonus_objective'] if candidate_client else 'N/A'}|{hr_client['bonus_objective'] if hr_client else 'N/A'}"
                 for client in connected_clients:
                     await client["websocket"].send_text(gameover_message)
 
