@@ -25,7 +25,7 @@ function App() {
     const [modalRemoteDays, setModalRemoteDays] = useState('');
 
     // --- State for Timer ---
-    const [timeLeft, setTimeLeft] = useState(7 * 60); // 7 minutes in seconds
+    const [timeLeft, setTimeLeft] = useState(0.2 * 60); // 7 minutes in seconds
 
     // --- Game Over State ---
     const [candidateScore, setCandidateScore] = useState(null);

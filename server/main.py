@@ -116,9 +116,19 @@ def linear_score(value, min_val, max_val, score_min, score_max):
 # ---------- Dynamic Candidate Scoring Function ----------
 def calculate_dynamic_candidate_score(salary, bonus, remote_days, bonus_objective_id, success, config): # Add config
     score = 0
+    
+    salary = salary or 0
+    bonus = bonus or 0
+    remote_days = remote_days or 0
 
+    # NEW: Check if an offer has been made.  If not, only consider outcome
+    if salary == 0 and bonus == 0 and remote_days == 0 and success == False:
+        score += config["outcome"]["failure"]  # Only the failure penalty
+        return score
+    
     # Base Salary Scoring:
     salary_config = config["base_salary"]  # Use the passed-in config
+    
     if salary < salary_config[0]["min"]:
         salary_score = 0
     elif salary <= salary_config[0]["max"]:
@@ -129,10 +139,10 @@ def calculate_dynamic_candidate_score(salary, bonus, remote_days, bonus_objectiv
         extra = min(extra, salary_config[1]["max_extra"])
         salary_score = salary_config[1]["base"] + extra
     score += salary_score
-
-
+    
     # Sign-On Bonus Scoring:
     bonus_config = config["sign_on_bonus"]  # Use the passed-in config
+
     if bonus < bonus_config[0]["min"]:
         bonus_score = 0
     elif bonus <= bonus_config[0]["max"]:
@@ -143,7 +153,6 @@ def calculate_dynamic_candidate_score(salary, bonus, remote_days, bonus_objectiv
         extra = min(extra, bonus_config[1]["max_extra"])
         bonus_score = bonus_config[1]["base"] + extra
     score += bonus_score
-
     # Remote Work Days Scoring:
     remote_days_config = config["remote_days"]  # Use the passed-in config
     if remote_days < 2:
@@ -159,7 +168,6 @@ def calculate_dynamic_candidate_score(salary, bonus, remote_days, bonus_objectiv
           remote_score = item["points"]
 
     score += remote_score
-
     # Outcome Modifier:
     score += config["outcome"]["success"] if success else config["outcome"]["failure"]
 
@@ -177,7 +185,17 @@ def calculate_dynamic_candidate_score(salary, bonus, remote_days, bonus_objectiv
 # ---------- Dynamic HR Scoring Function ----------
 def calculate_dynamic_hr_score(salary, bonus, remote_days, total_compensation, bonus_objective_id, success, config): # Add config
     score = 0
+    # Handle None values by defaulting to 0
+    salary = salary or 0
+    bonus = bonus or 0
+    remote_days = remote_days or 0
+    total_compensation = total_compensation or 0
 
+    # NEW: Check if an offer has been made. If not, only consider outcome
+    if salary == 0 and bonus == 0 and remote_days == 0 and success == False:
+        score += config["outcome"]["failure"]  # Only the failure penalty
+        return score
+    
     # Base Salary Scoring:
     salary_config = config["base_salary"]  # Use the passed-in config
     if salary <= salary_config[0]["max"]:
@@ -196,7 +214,7 @@ def calculate_dynamic_hr_score(salary, bonus, remote_days, total_compensation, b
         bonus_score = bonus_config[0]["score"]
     elif bonus <= bonus_config[1]["max"]:
         bonus_score = linear_score(bonus, bonus_config[1]["min"], bonus_config[1]["max"],
-                                   bonus_config[1]["score_min"], bonus_config[1]["score_max"])
+                                bonus_config[1]["score_min"], bonus_config[1]["score_max"])
     else:
         penalty = bonus_config[2]["penalty_per_unit"] * math.floor((bonus - bonus_config[2]["min"]) / bonus_config[2]["unit"])
         bonus_score = max(bonus_config[2]["base"] - penalty, bonus_config[2]["min_score"])
@@ -207,9 +225,9 @@ def calculate_dynamic_hr_score(salary, bonus, remote_days, total_compensation, b
     if total_compensation <= total_comp_config[0]["max"]:
         comp_score = total_comp_config[0]["score"]
     elif total_compensation <= total_comp_config[1]["max"]:
-      comp_score = linear_score(total_compensation, total_comp_config[1]["min"], total_comp_config[1]["max"], total_comp_config[1]["score_min"], total_comp_config[1]["score_max"])
+        comp_score = linear_score(total_compensation, total_comp_config[1]["min"], total_comp_config[1]["max"], total_comp_config[1]["score_min"], total_comp_config[1]["score_max"])
     else:
-      comp_score = total_comp_config[2]["score"]
+        comp_score = total_comp_config[2]["score"]
 
     score += comp_score
 
@@ -236,6 +254,7 @@ def calculate_dynamic_hr_score(salary, bonus, remote_days, total_compensation, b
                 score += bonus_obj["bonus"]
         else:
             score += bonus_obj["bonus"]
+
     return score
 
 @app.websocket("/ws")
@@ -382,7 +401,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 connected_clients = []  # Clear connected clients (end game)
                 player_counter = 1 # Reset
             # --- Handle Timeout ---
-            elif data.startswith("gameover|timeout"):  # Correctly handle the timeout message
+            elif data.startswith("gameover|timeout"):
                 message_id = str(uuid.uuid4())
                 candidate_client = next((c for c in connected_clients if c["role"] == "candidate"), None)
                 hr_client = next((c for c in connected_clients if c["role"] == "hr"), None)
@@ -391,30 +410,36 @@ async def websocket_endpoint(websocket: WebSocket):
                 hr_score = 0
 
                 if candidate_client and hr_client:
-                    #Calculate score. Negotiation failed, so pass success = False
+                    # Calculate score. Negotiation failed, so pass success = False
+                    # Get safe values with defaults of 0
+                    salary = candidate_client.get("salary", 0) or 0
+                    bonus = candidate_client.get("bonus", 0) or 0
+                    remote_days = candidate_client.get("remote_days", 0) or 0
+                    total_comp = salary + bonus  # Calculate total compensation safely
+
                     candidate_score = calculate_dynamic_candidate_score(
-                        candidate_client.get("salary",0), #get safe values
-                        candidate_client.get("bonus",0),
-                        candidate_client.get("remote_days",0),
+                        salary,
+                        bonus,
+                        remote_days,
                         candidate_client["bonus_objective"],
                         False,
                         candidate_scoring_config
                     )
                     hr_score = calculate_dynamic_hr_score(
-                        candidate_client.get("salary",0),
-                        candidate_client.get("bonus", 0),
-                        candidate_client.get("remote_days",0),
-                        candidate_client.get("salary",0) + candidate_client.get("bonus",0),
+                        salary,
+                        bonus,
+                        remote_days,
+                        total_comp,  # Pass the safely calculated total compensation
                         hr_client["bonus_objective"],
                         False,
                         hr_scoring_config
                     )
+
                 # Construct the extended gameover message for timeout
                 gameover_message = f"gameover|{message_id}|Negotiation timed out!|{candidate_score}|{hr_score}|{candidate_client['bonus_objective'] if candidate_client else 'N/A'}|{hr_client['bonus_objective'] if hr_client else 'N/A'}"
 
                 for client in connected_clients:
                     await client["websocket"].send_text(gameover_message)
-
 
                 connected_clients = []
                 player_counter = 1
