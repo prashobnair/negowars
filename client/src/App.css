@@ -246,3 +246,8 @@ h1 {
     margin: 0;
     font-size: 1.1em;
 }
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
