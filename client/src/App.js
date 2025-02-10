@@ -27,7 +27,7 @@ function App() {
     const [modalRemoteDays, setModalRemoteDays] = useState('');
 
     // --- State for Timer ---
-    const [timeLeft, setTimeLeft] = useState(0.2 * 60); // Set your desired timer duration
+    const [timeLeft, setTimeLeft] = useState(7 * 60); // Set your desired timer duration
     const [isTimerRunning, setIsTimerRunning] = useState(false); // State to manage timer
 
     // --- Game Over State ---
@@ -71,6 +71,14 @@ function App() {
     // --- State for storing the selected bonus objective ---
     const [bonusObjective, setBonusObjective] = useState(null);
 
+    const messageListRef = useRef(null); // Create a ref for the message list
+
+    // useEffect to scroll to the bottom whenever messages change
+    useEffect(() => {
+        if (messageListRef.current) {
+            messageListRef.current.scrollTop = messageListRef.current.scrollHeight; // Scroll to the bottom
+        }
+    }, [messages]); // Dependency on messages
 
     // --- useEffect for WebSocket Connection ---
     useEffect(() => {
@@ -126,7 +134,7 @@ function App() {
             } else if (messageType === "start_timer") {
                 console.log("Timer start message received."); // Log timer start message
                 setIsTimerRunning(true); // Start the timer
-                setTimeLeft(0.2 * 60); // Reset timer duration if needed
+                setTimeLeft(7 * 60); // Reset timer duration if needed
             } else if (messageType === "ack") {
                 const [_, messageId, playerNumber, messageContent] = parts;
                 setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
@@ -419,7 +427,7 @@ function App() {
                 <p>Remote Work Days Per Week: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
             </div>
 
-            <div className="message-list">
+            <div className="message-list" ref={messageListRef} style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 {messages.map((msg, index) => (
                     <div key={index} className={`message ${msg.sender === 'me' ? 'my-message' : msg.sender === 'system' ? 'system-message' : 'other-message'}`}>
                         {msg.sender !== "system" && (
