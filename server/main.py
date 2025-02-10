@@ -305,10 +305,12 @@ def validate_offer(salary: int, bonus: int, remote_days: int) -> tuple[bool, str
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    global next_room_id
-
+    global next_room_id  # Declare next_room_id as global
+    logger.info("WebSocket endpoint called")
     await websocket.accept()
     logger.info(f"Client connected: {websocket.client}")
+
+    room = None  # Initialize room variable
 
     try:
         # Find a room to join, or create a new one
@@ -327,23 +329,15 @@ async def websocket_endpoint(websocket: WebSocket):
             }
             next_room_id += 1
 
-        room = rooms[room_id]
+        room = rooms[room_id]  # Assign room after checking
         player_number = room["next_player_number"]
         room["next_player_number"] += 1
         role = "candidate" if player_number % 2 != 0 else "hr"
-
-        # --- Assign a *random* bonus objective ---
-        if role == "candidate":
-            bonus_objectives = ["debt"]
-        else:
-            bonus_objectives = ["budget"]
-        chosen_objective = random.choice(bonus_objectives)
 
         client_info = {
             "websocket": websocket,
             "player": player_number,
             "role": role,
-            "bonus_objective": chosen_objective,
             "room_id": room_id,
             "is_active": True
         }
@@ -356,29 +350,50 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text(f"role|{role}")
         except Exception as e:
             logger.error(f"Error sending initial messages: {e}")
-            # Mark client as inactive and clean up
             client_info["is_active"] = False
             if client_info in room["players"]:
                 room["players"].remove(client_info)
             return
 
-        # Start the game if we have at least two players
-        if len(room["players"]) >= 2 and not room["game_started"]:
-            room["game_started"] = True
-            logger.info(f"Game started in room {room_id}")
+        # Check if this is the only player in the room
+        if len(room["players"]) == 1:
+            logger.info(f"Player {client_info['player']} is waiting for another player to join.")
+            await websocket.send_text("waiting|Waiting for another player to join...")
+            await websocket.send_text("chat_disabled|Chat is disabled until the second player joins.")
+        else:
+            # Notify both players that the second player has joined
+            for player in room["players"]:
+                if player["is_active"]:
+                    await player["websocket"].send_text("player_connected|A second player has connected. You can start the negotiation now.")
 
         # Main message loop
         while True:
             try:
                 data = await websocket.receive_text()
-                # Get the client info for the current websocket.
                 current_client = next((c for c in room["players"] if c["websocket"] == websocket), None)
-                # CRITICAL: Check if client is active *before* processing.
                 if not current_client or not current_client["is_active"]:
                     logger.warning(f"Received message from inactive client: {websocket.client}. Ignoring.")
-                    continue  # Skip processing
+                    continue
 
                 logger.info(f"Received from Player {current_client['player']} in Room {current_client['room_id']}: {data}")
+                logger.info(f"Current players in room {room_id}: {[c['player'] for c in room['players']]}")
+
+                # Log the number of players before evaluating the condition
+                player_count = len(room["players"])
+                logger.info(f"Evaluating game start conditions. Current player count: {player_count}")
+
+                # --- Start the game if we have at least two players ---
+                if player_count == 2 and not room["game_started"]:
+                    room["game_started"] = True
+                    logger.info(f"Game started in room {room_id}")
+                    for player in room["players"]:
+                        if player["is_active"]:
+                            await player["websocket"].send_text("game_started|Both players are connected. The game is starting!")
+                elif player_count < 2:
+                    logger.info(f"Player {current_client['player']} is waiting for another player to join.")
+                    await websocket.send_text("waiting|Waiting for another player to join...")
+                else:
+                    logger.info("Unexpected condition: More than 2 players in the room.")
 
                 # --- Handle Offer Messages ---
                 if data.startswith("offer:"):
@@ -516,15 +531,16 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         logger.info(f"Client disconnected during setup: {websocket.client}")
     except Exception as e:
-        logger.error(f"Unexpected error: {e}")
+        logger.error(f"Error in websocket endpoint: {e}")
     finally:
         # Cleanup code
         try:
-            current_client = next((c for c in room["players"] if c["websocket"] == websocket), None)
-            if current_client:
-                current_client["is_active"] = False
-                if current_client in room["players"]:
-                    room["players"].remove(current_client)
+            if room:  # Ensure room is assigned before accessing it
+                current_client = next((c for c in room["players"] if c["websocket"] == websocket), None)
+                if current_client:
+                    current_client["is_active"] = False
+                    if current_client in room["players"]:
+                        room["players"].remove(current_client)
                     
             # Clean up empty rooms
             if room_id in rooms and not rooms[room_id]["players"]:
