@@ -27,7 +27,8 @@ function App() {
     const [modalRemoteDays, setModalRemoteDays] = useState('');
 
     // --- State for Timer ---
-    const [timeLeft, setTimeLeft] = useState(7 * 60); // 7 minutes in seconds
+    const [timeLeft, setTimeLeft] = useState(7 * 60); // Set your desired timer duration
+    const [isTimerRunning, setIsTimerRunning] = useState(false); // State to manage timer
 
     // --- Game Over State ---
     const [candidateScore, setCandidateScore] = useState(null);
@@ -122,6 +123,10 @@ function App() {
                 setMessages((prev) => [...prev, { player: "system", text: message, sender: "system" }]);
                 setIsChatDisabled(false); // Enable chat input
                 setIsOfferDisabled(false); // Enable offer button
+            } else if (messageType === "start_timer") {
+                console.log("Timer start message received."); // Log timer start message
+                setIsTimerRunning(true); // Start the timer
+                setTimeLeft(7 * 60); // Reset timer duration if needed
             } else if (messageType === "ack") {
                 const [_, messageId, playerNumber, messageContent] = parts;
                 setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
@@ -224,7 +229,7 @@ function App() {
     // --- useEffect for Timer ---
     useEffect(() => {
         let timerInterval;
-        if (timeLeft > 0 && playerRole && myPlayerNumber && roomId) { // Ensure timer only runs if playerRole is set and both players are connected
+        if (isTimerRunning && timeLeft > 0) {
             timerInterval = setInterval(() => {
                 setTimeLeft((prevTime) => prevTime - 1);
             }, 1000); // Decrement every 1000ms (1 second)
@@ -237,7 +242,7 @@ function App() {
 
         // Cleanup function: clear the interval when the component unmounts or timeLeft changes
         return () => clearInterval(timerInterval);
-    }, [timeLeft, socketRef, playerRole, myPlayerNumber, roomId]); // Add playerRole, myPlayerNumber, and roomId to dependencies
+    }, [isTimerRunning, timeLeft]); // Add isTimerRunning and timeLeft to dependencies
 
     const sendMessage = () => {
         if (messageInput.trim() && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {

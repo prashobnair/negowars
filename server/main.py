@@ -365,6 +365,8 @@ async def websocket_endpoint(websocket: WebSocket):
             for player in room["players"]:
                 if player["is_active"]:
                     await player["websocket"].send_text("player_connected|A second player has connected. You can start the negotiation now.")
+                    # Start the timer when both players are connected
+                    await player["websocket"].send_text("start_timer|Timer is starting now.")
 
         # Main message loop
         while True:
@@ -389,6 +391,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     for player in room["players"]:
                         if player["is_active"]:
                             await player["websocket"].send_text("game_started|Both players are connected. The game is starting!")
+                            # Start the timer when both players are connected
+                            await player["websocket"].send_text("start_timer|Timer is starting now.")
                 elif player_count < 2:
                     logger.info(f"Player {current_client['player']} is waiting for another player to join.")
                     await websocket.send_text("waiting|Waiting for another player to join...")
