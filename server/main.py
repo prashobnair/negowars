@@ -5,6 +5,9 @@ import random
 import math
 import logging
 import asyncio
+from chat_evaluator import evaluate_chat
+from datetime import datetime  # if not already imported
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -325,7 +328,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 "players": [],
                 "next_player_number": 1,
                 "game_started": False,
-                "offer": {"salary": None, "bonus": None, "remote_days": None}
+                "offer": {"salary": None, "bonus": None, "remote_days": None},
+                "chat_log": []  # New key to store chat messages
             }
             next_room_id += 1
 
@@ -472,6 +476,15 @@ async def websocket_endpoint(websocket: WebSocket):
                                     hr_scoring_config
                                 )
                                 logger.info(f"HR score calculated: {hr_score}")
+
+                                # --- Compute Chat Bonus ---
+                                logger.info(f"Computing chat quality bonus")
+                                candidate_chat_bonus = evaluate_chat(room["chat_log"], candidate_client["player"])
+                                hr_chat_bonus = evaluate_chat(room["chat_log"], hr_client["player"])
+
+                                final_candidate_score = candidate_score + candidate_chat_bonus
+                                final_hr_score = hr_score + hr_chat_bonus
+
                             except Exception as e:
                                 logger.exception(f"Error during score calculation: {e}")
                         else:
@@ -481,7 +494,7 @@ async def websocket_endpoint(websocket: WebSocket):
                         logger.warning("Either candidate or HR client not found in the room.")
 
 
-                    gameover_message = f"gameover|{message_id}|Negotiation successful!|{candidate_score}|{hr_score}|{candidate_client['bonus_objective'] if candidate_client else 'N/A'}|{hr_client['bonus_objective'] if hr_client else 'N/A'}"
+                    gameover_message = f"gameover|{message_id}|Negotiation successful!|{final_candidate_score}|{final_hr_score}|{candidate_client['bonus_objective'] if candidate_client else 'N/A'}|{hr_client['bonus_objective'] if hr_client else 'N/A'}"
                     for client in room["players"]:  # Send to all players in the *room*
                         if client["is_active"]: # Check for active
                             await client["websocket"].send_text(gameover_message)
@@ -510,8 +523,17 @@ async def websocket_endpoint(websocket: WebSocket):
                         hr_score = calculate_dynamic_hr_score(
                             0, 0, 0, 0, "", False, hr_scoring_config
                         )
+
+                        # --- Compute Chat Bonus ---
+                        logger.info(f"Computing chat quality bonus")
+                        candidate_chat_bonus = evaluate_chat(room["chat_log"], candidate_client["player"])
+                        hr_chat_bonus = evaluate_chat(room["chat_log"], hr_client["player"])
+
+                        final_candidate_score = candidate_score + candidate_chat_bonus
+                        final_hr_score = hr_score + hr_chat_bonus
+                        
                     # Construct the extended gameover message for timeout
-                    gameover_message = f"gameover|{message_id}|Negotiation timed out!|{candidate_score}|{hr_score}|{candidate_client['bonus_objective'] if candidate_client else 'N/A'}|{hr_client['bonus_objective'] if hr_client else 'N/A'}"
+                    gameover_message = f"gameover|{message_id}|Negotiation timed out!|{final_candidate_score}|{final_hr_score}|{candidate_client['bonus_objective'] if candidate_client else 'N/A'}|{hr_client['bonus_objective'] if hr_client else 'N/A'}"
 
                     for client in room["players"]:  # Send to all players in the *room*
                         if client["is_active"]: # Check for active
@@ -523,7 +545,14 @@ async def websocket_endpoint(websocket: WebSocket):
                 # --- Handle Regular Chat Messages ---
                 else:
                     message_id = str(uuid.uuid4())
-                    for client in room["players"]:  # Broadcast to all players in the *room*
+                    # Log the message in the room's chat log
+                    room["chat_log"].append({
+                        "sender": current_client['player'],
+                        "text": data,
+                        "timestamp": datetime.utcnow().isoformat()
+                    })
+                    # Broadcast to all players in the *room*
+                    for client in room["players"]:  
                         if client["is_active"]:#Check is active
                             if client["websocket"] != websocket:
                                 await client["websocket"].send_text(f"msg|{message_id}|{current_client['player']}|{data}")
