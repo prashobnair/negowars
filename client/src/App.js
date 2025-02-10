@@ -71,6 +71,14 @@ function App() {
     // --- State for storing the selected bonus objective ---
     const [bonusObjective, setBonusObjective] = useState(null);
 
+    const messageListRef = useRef(null); // Create a ref for the message list
+
+    // useEffect to scroll to the bottom whenever messages change
+    useEffect(() => {
+        if (messageListRef.current) {
+            messageListRef.current.scrollTop = messageListRef.current.scrollHeight; // Scroll to the bottom
+        }
+    }, [messages]); // Dependency on messages
 
     // --- useEffect for WebSocket Connection ---
     useEffect(() => {
@@ -419,7 +427,7 @@ function App() {
                 <p>Remote Work Days Per Week: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
             </div>
 
-            <div className="message-list">
+            <div className="message-list" ref={messageListRef} style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 {messages.map((msg, index) => (
                     <div key={index} className={`message ${msg.sender === 'me' ? 'my-message' : msg.sender === 'system' ? 'system-message' : 'other-message'}`}>
                         {msg.sender !== "system" && (

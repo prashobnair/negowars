@@ -334,12 +334,17 @@ async def websocket_endpoint(websocket: WebSocket):
         room["next_player_number"] += 1
         role = "candidate" if player_number % 2 != 0 else "hr"
 
+        # NEW: Assign a bonus objective based on the role
+        bonus_objectives = candidate_scoring_config["bonus_objectives"] if role == "candidate" else hr_scoring_config["bonus_objectives"]
+        bonus_objective_id = random.choice(list(bonus_objectives.keys()))  # Randomly select a bonus objective ID
+
         client_info = {
             "websocket": websocket,
             "player": player_number,
             "role": role,
             "room_id": room_id,
-            "is_active": True
+            "is_active": True,
+            "bonus_objective": bonus_objective_id  # Add this line to set the bonus objective
         }
         room["players"].append(client_info)
         logger.info(f"Client added to room {room_id}, Player {player_number}, Role: {role}")
@@ -498,12 +503,12 @@ async def websocket_endpoint(websocket: WebSocket):
                     hr_score = 0
 
                     if candidate_client and hr_client:
-                        # Calculate score. Negotiation failed, so pass success = False
+                        # Since no offer was made, we use default values (0, 0, 0) and an empty bonus_objective_id.
                         candidate_score = calculate_dynamic_candidate_score(
-                            config=candidate_scoring_config, success = False # Pass the config and success
+                            0, 0, 0, "", False, candidate_scoring_config
                         )
                         hr_score = calculate_dynamic_hr_score(
-                           config= hr_scoring_config, success = False # Pass the config and success
+                            0, 0, 0, 0, "", False, hr_scoring_config
                         )
                     # Construct the extended gameover message for timeout
                     gameover_message = f"gameover|{message_id}|Negotiation timed out!|{candidate_score}|{hr_score}|{candidate_client['bonus_objective'] if candidate_client else 'N/A'}|{hr_client['bonus_objective'] if hr_client else 'N/A'}"
