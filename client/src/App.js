@@ -27,7 +27,7 @@ function App() {
     const [modalRemoteDays, setModalRemoteDays] = useState('');
 
     // --- State for Timer ---
-    const [timeLeft, setTimeLeft] = useState(7 * 60); // Set your desired timer duration
+    const [timeLeft, setTimeLeft] = useState(0.2 * 60); // Set your desired timer duration
     const [isTimerRunning, setIsTimerRunning] = useState(false); // State to manage timer
 
     // --- Game Over State ---
@@ -126,7 +126,7 @@ function App() {
             } else if (messageType === "start_timer") {
                 console.log("Timer start message received."); // Log timer start message
                 setIsTimerRunning(true); // Start the timer
-                setTimeLeft(7 * 60); // Reset timer duration if needed
+                setTimeLeft(0.2 * 60); // Reset timer duration if needed
             } else if (messageType === "ack") {
                 const [_, messageId, playerNumber, messageContent] = parts;
                 setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
