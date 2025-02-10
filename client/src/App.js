@@ -27,13 +27,19 @@ function App() {
     const [modalRemoteDays, setModalRemoteDays] = useState('');
 
     // --- State for Timer ---
-    const [timeLeft, setTimeLeft] = useState(7 * 60); // 7 minutes in seconds
+    const [timeLeft, setTimeLeft] = useState(7 * 60); // Set your desired timer duration
+    const [isTimerRunning, setIsTimerRunning] = useState(false); // State to manage timer
 
     // --- Game Over State ---
     const [candidateScore, setCandidateScore] = useState(null);
     const [hrScore, setHrScore] = useState(null);
     const [opponentBonusObjective, setOpponentBonusObjective] = useState(null); // e.g., "debt", "quick"
 
+    // --- State for Chat Disabled ---
+    const [isChatDisabled, setIsChatDisabled] = useState(false);
+
+    // --- State for Offer Button Disabled ---
+    const [isOfferDisabled, setIsOfferDisabled] = useState(true); // Initially disable the offer button
 
     // --- Define Objectives (Hardcoded for MVP) ---
     const candidatePrimaryObjectives = [
@@ -95,6 +101,7 @@ function App() {
             } else if (messageType === "role") {
                 const role = parts[1];
                 setPlayerRole(role);
+                console.log(`Player role set to: ${role}`); // Log role assignment
 
                 const bonusObjectives = role === "candidate" ? candidateBonusObjectives : hrBonusObjectives;
                 const randomIndex = Math.floor(Math.random() * bonusObjectives.length);
@@ -102,6 +109,24 @@ function App() {
 
                 setMessages((prev) => [...prev, { player: myPlayerNumberRef.current, text: `You are ${role.charAt(0).toUpperCase() + role.slice(1)}`, sender: "system" }]);
 
+            } else if (messageType === "waiting") {
+                const message = parts[1];
+                console.log(`Waiting message received: ${message}`); // Log waiting message
+                setMessages((prev) => [...prev, { player: "system", text: message, sender: "system" }]);
+            } else if (messageType === "chat_disabled") {
+                console.log("Chat disabled message received."); // Log chat disabled message
+                setIsChatDisabled(true); // Disable chat input
+                setIsOfferDisabled(true); // Disable offer button
+            } else if (messageType === "player_connected") {
+                const message = "A second player has connected. You can start the negotiation now.";
+                console.log(message); // Log player connected message
+                setMessages((prev) => [...prev, { player: "system", text: message, sender: "system" }]);
+                setIsChatDisabled(false); // Enable chat input
+                setIsOfferDisabled(false); // Enable offer button
+            } else if (messageType === "start_timer") {
+                console.log("Timer start message received."); // Log timer start message
+                setIsTimerRunning(true); // Start the timer
+                setTimeLeft(7 * 60); // Reset timer duration if needed
             } else if (messageType === "ack") {
                 const [_, messageId, playerNumber, messageContent] = parts;
                 setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
@@ -204,11 +229,11 @@ function App() {
     // --- useEffect for Timer ---
     useEffect(() => {
         let timerInterval;
-        if (timeLeft > 0) {
+        if (isTimerRunning && timeLeft > 0) {
             timerInterval = setInterval(() => {
                 setTimeLeft((prevTime) => prevTime - 1);
             }, 1000); // Decrement every 1000ms (1 second)
-        } else {
+        } else if (timeLeft === 0) {
             // When timer reaches 0, send "gameover" message
             if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
                 socketRef.current.send("gameover|timeout|Game Over! Negotiation timed out."); // Use consistent format
@@ -217,7 +242,7 @@ function App() {
 
         // Cleanup function: clear the interval when the component unmounts or timeLeft changes
         return () => clearInterval(timerInterval);
-    }, [timeLeft, socketRef]);
+    }, [isTimerRunning, timeLeft]); // Add isTimerRunning and timeLeft to dependencies
 
     const sendMessage = () => {
         if (messageInput.trim() && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -414,13 +439,14 @@ function App() {
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
                     onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          sendMessage();
+                        if (e.key === 'Enter' && !isChatDisabled) {
+                            sendMessage();
                         }
-                      }}
+                    }}
                     className="message-input"
+                    disabled={isChatDisabled}
                 />
-                <button onClick={sendMessage} className="send-button">Send</button>
+                <button onClick={sendMessage} className="send-button" disabled={isChatDisabled}>Send</button>
             </div>
             <div className="action-buttons">
                 <button 
@@ -432,7 +458,13 @@ function App() {
                 >
                     Accept
                 </button>
-                <button onClick={handleOffer} className="action-button">Offer</button>
+                <button 
+                    onClick={handleOffer} 
+                    className="action-button" 
+                    disabled={isOfferDisabled} // Disable offer button if chat is disabled
+                >
+                    Offer
+                </button>
                 <button onClick={handleObjectives} className="action-button">Objectives</button>
             </div>
 
