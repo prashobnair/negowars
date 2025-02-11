@@ -409,9 +409,8 @@ function App() {
 
     return (
         <div className="chat-container">
-            <h1>NegoWars (MVP)</h1>
             <div className="room-info">
-                <p>Room #{roomId || "..."}</p>
+                <p>Negotiation Room #{roomId || "..."}</p>
             </div>
 
             {/* --- Display Timer --- */}
@@ -421,7 +420,7 @@ function App() {
 
             {/* --- Current Offer Display --- */}
             <div className="current-offer">
-                <h2>Current Offer</h2>
+                <h2><strong>Current Offer:</strong></h2>
                 <p>Base Salary: ${currentSalaryOffer !== null ? currentSalaryOffer.toLocaleString() : "N/A"}</p>
                 <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
                 <p>Remote Work Days Per Week: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
