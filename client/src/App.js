@@ -1,15 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { SendIcon, CheckIcon, AddIcon, InfoIcon } from './icons';
 import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
     const [messages, setMessages] = useState([]);
     const [messageInput, setMessageInput] = useState('');
-    const [myPlayerNumber, setMyPlayerNumber] = useState(null);
     const [roomId, setRoomId] = useState(null);
     const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
-    const [offerAmount, setOfferAmount] = useState('');
     const [isObjectivesModalOpen, setIsObjectivesModalOpen] = useState(false);
     const socketRef = useRef(null);
     const myPlayerNumberRef = useRef(null);
@@ -112,9 +109,8 @@ function App() {
             if (messageType === "init") {
                 const playerNumber = parts[1];
                 const roomId = parts[2];
-                setMyPlayerNumber(playerNumber);
-                setRoomId(roomId);
                 myPlayerNumberRef.current = playerNumber;
+                setRoomId(roomId);
                 
             } else if (messageType === "role") {
                 const role = parts[1];
@@ -245,7 +241,7 @@ function App() {
         socketRef.current.onerror = (error) => {
             console.error('WebSocket error:', error);
         };
-    }, []); // Empty dependency array
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     // --- useEffect for Timer ---
     useEffect(() => {
