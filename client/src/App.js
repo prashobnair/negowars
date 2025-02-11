@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+import { SendIcon, CheckIcon, AddIcon, InfoIcon } from './icons';
+import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
     const [messages, setMessages] = useState([]);
@@ -41,6 +43,8 @@ function App() {
     // --- State for Offer Button Disabled ---
     const [isOfferDisabled, setIsOfferDisabled] = useState(true); // Initially disable the offer button
 
+    const [isLoading, setIsLoading] = useState(false);
+
     // --- Define Objectives (Hardcoded for MVP) ---
     const candidatePrimaryObjectives = [
         "Achieve a base salary of at least $65,000.",
@@ -73,6 +77,10 @@ function App() {
 
     const messageListRef = useRef(null); // Create a ref for the message list
 
+    const [isTyping, setIsTyping] = useState(false);
+    const [isPartnerTyping, setIsPartnerTyping] = useState(false);
+    const typingTimeout = useRef();
+
     // useEffect to scroll to the bottom whenever messages change
     useEffect(() => {
         if (messageListRef.current) {
@@ -88,8 +96,10 @@ function App() {
         }
 
         socketRef.current = new WebSocket('ws://localhost:8000/ws');
-        
+        setIsLoading(true);
+
         socketRef.current.onopen = () => {
+            setIsLoading(false); // Set loading to false when connected
             console.log('WebSocket connected');
         };
 
@@ -218,6 +228,9 @@ function App() {
                 setModalSalary('');
                 setModalBonus('');
                 setModalRemoteDays('');
+            } else if (messageType === "typing") {
+                const typingStatus = parts[1];
+                setIsPartnerTyping(typingStatus === "start");
             } else if (messageType === "error") {
                 const errorMessage = parts.slice(1).join("|");
                 alert(errorMessage);  // Or handle the error in a more user-friendly way
@@ -255,7 +268,6 @@ function App() {
     const sendMessage = () => {
         if (messageInput.trim() && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(messageInput);
-            setMessageInput('');
         }
     };
 
@@ -273,6 +285,19 @@ function App() {
         setModalRemoteDays(currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : '');
 
     };
+
+    const handleInputChange = (e) => {
+        setMessageInput(e.target.value);
+        if (!isTyping) {
+          socketRef.current.send("typing|start");
+          setIsTyping(true);
+        }
+        clearTimeout(typingTimeout.current);
+        typingTimeout.current = setTimeout(() => {
+          setIsTyping(false);
+          socketRef.current.send("typing|stop");
+        }, 1000);
+      };
 
     const handleObjectives = () => {
         setIsObjectivesModalOpen(true);
@@ -408,14 +433,42 @@ function App() {
     };
 
     return (
-        <div className="chat-container">
-            <div className="room-info">
-                <p>Negotiation Room #{roomId || "..."}</p>
+        <>
+        {isLoading && (
+            <div className="loading-overlay">
+                <div className="loading-spinner"></div>
             </div>
+        )}
 
-            {/* --- Display Timer --- */}
-            <div className="round-info">
-                <p>Time Left: {formatTime(timeLeft)}</p>
+        <div className="chat-container">
+            <div className="header">
+                <div className="status-badge">
+                    <span className="role-tag">{playerRole?.toUpperCase()}</span>
+                    <span className="room-id">Room #{roomId}</span>
+                </div>
+                <div className="timer">
+                    <div className="timer-progress">
+                    <svg width="48" height="48">
+                        <circle
+                        cx="24"
+                        cy="24"
+                        r="20"
+                        className="timer-base"
+                        strokeWidth="4"
+                        />
+                        <circle
+                        cx="24"
+                        cy="24"
+                        r="20"
+                        className="timer-fill"
+                        strokeWidth="4"
+                        strokeDasharray={`${(timeLeft / 420) * 126} 126`}
+                        transform="rotate(-90 24 24)"
+                        />
+                    </svg>
+                    </div>
+                    <span className="timer-text">{formatTime(timeLeft)}</span>
+                </div>
             </div>
 
             {/* --- Current Offer Display --- */}
@@ -426,155 +479,252 @@ function App() {
                 <p>Remote Work Days Per Week: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
             </div>
 
-            <div className="message-list" ref={messageListRef} style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            <div className="message-list" ref={messageListRef}>
                 {messages.map((msg, index) => (
                     <div key={index} className={`message ${msg.sender === 'me' ? 'my-message' : msg.sender === 'system' ? 'system-message' : 'other-message'}`}>
-                        {msg.sender !== "system" && (
-                            <span className="message-player">
-                            {msg.sender === 'me' ? 
-                                playerRole.charAt(0).toUpperCase() + playerRole.slice(1) : 
-                                msg.role}: 
+                    {msg.sender !== "system" && (
+                        <span className="message-player">
+                        {msg.sender === 'me' ? 
+                            playerRole.charAt(0).toUpperCase() + playerRole.slice(1) : 
+                            msg.role}: 
                         </span>
-                        )}
-                        <span className="message-text">{msg.text}</span>
+                    )}
+                    <span className="message-text">{msg.text}</span>
                     </div>
                 ))}
+                {isPartnerTyping && (
+                    <div className="typing-indicator">
+                    <div className="dot"></div>
+                    <div className="dot"></div>
+                    <div className="dot"></div>
+                    </div>
+                )}
             </div>
             <div className="input-area">
                 <input
                     type="text"
                     value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
+                    onChange={handleInputChange}
                     onKeyPress={(e) => {
-                        if (e.key === 'Enter' && !isChatDisabled) {
-                            sendMessage();
-                        }
+                    if (e.key === 'Enter' && !isChatDisabled) {
+                        sendMessage();
+                    }
                     }}
                     className="message-input"
                     disabled={isChatDisabled}
+                    placeholder="Type your message..."
                 />
-                <button onClick={sendMessage} className="send-button" disabled={isChatDisabled}>Send</button>
+                <button 
+                    onClick={sendMessage} 
+                    className="send-button" 
+                    disabled={isChatDisabled}
+                >
+                    <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
             </div>
             <div className="action-buttons">
                 <button 
                     onClick={handleAccept} 
-                    className="action-button"
-                    disabled={!currentSalaryOffer || // Disable if no offer exists
-                             !lastOfferSender || // Disable if no offer has been made
-                             lastOfferSender === myPlayerNumberRef.current} // Disable for the player who made the offer
+                    className="action-button accept"
+                    disabled={!currentSalaryOffer || !lastOfferSender || lastOfferSender === myPlayerNumberRef.current}
                 >
+                    <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    </svg>
                     Accept
                 </button>
                 <button 
                     onClick={handleOffer} 
-                    className="action-button" 
-                    disabled={isOfferDisabled} // Disable offer button if chat is disabled
+                    className="action-button offer"
+                    disabled={isOfferDisabled}
                 >
+                    <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
                     Offer
                 </button>
-                <button onClick={handleObjectives} className="action-button">Objectives</button>
+                <button 
+                    onClick={handleObjectives} 
+                    className="action-button objectives"
+                >
+                    <svg width="24" height="24" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                    </svg>
+                    Objectives
+                </button>
             </div>
 
-            {isOfferModalOpen && (
-                <div className="modal-overlay">
-                    <div className="modal">
+            <AnimatePresence>
+                {isOfferModalOpen && (
+                
+                    <motion.div
+                    className="modal-overlay"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }} // Optional: Add a transition duration
+                    style={{position: 'fixed', top: '0', left:'0', width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
+                    >
+                    <motion.div
+                        className="modal"
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 50, opacity: 0 }}
+                        transition={{ duration: 0.2 }} // Optional: Add a transition duration
+                        style={{backgroundColor: 'white', padding: '20px', borderRadius: '5px'}}
+                    >
                         <h2>Make an Offer</h2>
-                        <label htmlFor="modalSalary">Base Salary:</label>
-                        <input
-                            type="number"
-                            id="modalSalary"
-                            value={modalSalary}
-                            onChange={(e) => setModalSalary(e.target.value)}
-                            className="modal-input"
-                        />
-                        <label htmlFor="modalBonus">Sign-On Bonus:</label>
-                        <input
-                            type="number"
-                            id="modalBonus"
-                            value={modalBonus}
-                            onChange={(e) => setModalBonus(e.target.value)}
-                            className="modal-input"
-                        />
-                        <label htmlFor="modalRemoteDays">Remote Work Days Per Week:</label>
-                        <input
-                            type="number"
-                            id="modalRemoteDays"
-                            value={modalRemoteDays}
-                            onChange={(e) => setModalRemoteDays(e.target.value)}
-                            className="modal-input"
-                        />
-                        <div className="modal-buttons">
-                            <button onClick={handleSubmitOffer} className="modal-button modal-submit">Submit</button>
-                            <button onClick={handleCancelOffer} className="modal-button modal-cancel">Cancel</button>
+                        <div className="input-group">
+                            <label htmlFor="modalSalary">Base Salary ($)</label>
+                            <input
+                                type="number"
+                                id="modalSalary"
+                                value={modalSalary}
+                                onChange={(e) => setModalSalary(e.target.value)}
+                                className="modal-input"
+                                placeholder="65000"
+                            />
                         </div>
-                    </div>
-                </div>
-            )}
-
-            {isObjectivesModalOpen && (
-                <div className="modal-overlay">
-                    <div className="modal">
+                        <div className="input-group">
+                            <label htmlFor="modalBonus">Sign-On Bonus ($)</label>
+                            <input
+                                type="number"
+                                id="modalBonus"
+                                value={modalBonus}
+                                onChange={(e) => setModalBonus(e.target.value)}
+                                className="modal-input"
+                                placeholder="65000"
+                            />
+                        </div>
+                        <div className="input-group">
+                            <label htmlFor="modalRemoteDays">Remote Work Days Per Week</label>
+                            <input
+                                type="number"
+                                id="modalRemoteDays"
+                                value={modalRemoteDays}
+                                onChange={(e) => setModalRemoteDays(e.target.value)}
+                                className="modal-input"
+                                placeholder="65000"
+                            />
+                        </div>
                         
-                        {playerRole === "candidate" && (
-                            <div>
-                                <h3>Primary Objectives:</h3>
-                                <ul>
-                                    {candidatePrimaryObjectives.map((objective, index) => (
-                                        <li key={index}>{objective}</li>
-                                    ))}
-                                </ul>
-                                <h3>Bonus Objective:</h3>
-                                <p>{bonusObjective.description}</p>
-                                <p>Bonus: {bonusObjective.bonus}</p>
-                            </div>
-                        )}
-                        {playerRole === "hr" && (
-                            <div>
-                                <h3>Primary Objectives:</h3>
-                                <ul>
-                                    {hrPrimaryObjectives.map((objective, index) => (
-                                        <li key={index}>{objective}</li>
-                                    ))}
-                                </ul>
-                                <h3>Bonus Objective:</h3>
-                                <p>{bonusObjective.description}</p>
-                                <p>Bonus: {bonusObjective.bonus}</p>
-                            </div>
-                        )}
                         <div className="modal-buttons">
-                            <button onClick={handleCloseObjectives} className="modal-button modal-cancel">Close</button>
+                            <button 
+                                onClick={handleSubmitOffer} 
+                                className="modal-button modal-submit"
+                            >
+                                Submit Offer
+                            </button>
+                            <button 
+                                onClick={handleCancelOffer} 
+                                className="modal-button modal-cancel"
+                            >
+                                Cancel
+                            </button>
                         </div>
-                    </div>
-                </div>
-            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            <AnimatePresence>
+                {isObjectivesModalOpen && (
+                    <motion.div
+                    className="modal-overlay"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{position: 'fixed', top: '0', left:'0', width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
+                >
+                    <motion.div
+                        className="modal"
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: 50, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        style={{backgroundColor: 'white', padding: '20px', borderRadius: '5px'}}
+                    >
+                            
+                            {playerRole === "candidate" && (
+                                <div>
+                                    <h3>Primary Objectives:</h3>
+                                    <ul>
+                                        {candidatePrimaryObjectives.map((objective, index) => (
+                                            <li key={index}>{objective}</li>
+                                        ))}
+                                    </ul>
+                                    <h3>Bonus Objective:</h3>
+                                    <p>{bonusObjective.description}</p>
+                                    <p>Bonus: {bonusObjective.bonus}</p>
+                                </div>
+                            )}
+                            {playerRole === "hr" && (
+                                <div>
+                                    <h3>Primary Objectives:</h3>
+                                    <ul>
+                                        {hrPrimaryObjectives.map((objective, index) => (
+                                            <li key={index}>{objective}</li>
+                                        ))}
+                                    </ul>
+                                    <h3>Bonus Objective:</h3>
+                                    <p>{bonusObjective.description}</p>
+                                    <p>Bonus: {bonusObjective.bonus}</p>
+                                </div>
+                            )}
+                            <div className="modal-buttons">
+                                <button onClick={handleCloseObjectives} className="modal-button modal-cancel">Close</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
             {/* --- Game Over Modal --- */}
-            {isGameOverModalOpen && (
-                <div className="modal-overlay">
-                    <div className="modal">
-                        <h2>Game Over</h2>
-                        <p>{gameOverMessage}</p>
-                        {/* Display Scores */}
-                        <p>Candidate Score: {candidateScore !== null ? candidateScore : "N/A"}</p>
-                        <p>HR Score: {hrScore !== null ? hrScore : "N/A"}</p>
+            <AnimatePresence>
+                {isGameOverModalOpen && (
+                    <motion.div
+                    className="modal-overlay"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{position: 'fixed', top: '0', left:'0', width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
+                >
+                    <motion.div
+                    className="modal"
+                    initial={{ y: 50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 50, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{backgroundColor: 'white', padding: '20px', borderRadius: '5px'}}
+                    >
+                            <h2>Game Over</h2>
+                            <p>{gameOverMessage}</p>
+                            {/* Display Scores */}
+                            <p>Candidate Score: {candidateScore !== null ? candidateScore : "N/A"}</p>
+                            <p>HR Score: {hrScore !== null ? hrScore : "N/A"}</p>
 
-                        {/* Display Opponent's Bonus Objective (if game ended successfully)*/}
-                        {gameOverMessage && !gameOverMessage.includes("timed out") && (
-                            <>
-                                <h3>Final Terms:</h3>
-                                <p>Base Salary: ${currentSalaryOffer !== null ? currentSalaryOffer.toLocaleString() : "N/A"}</p>
-                                <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
-                                <p>Remote Work Days: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
-                                <h3>Opponent's Bonus Objective:</h3>
-                                <p>{getBonusObjectiveDescription(opponentBonusObjective, playerRole)}</p>
-                            </>
-                        )}
-                        <div className="modal-buttons">
-                            <button onClick={handleCloseGameOver} className="modal-button modal-cancel">Close</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                            {/* Display Opponent's Bonus Objective (if game ended successfully)*/}
+                            {gameOverMessage && !gameOverMessage.includes("timed out") && (
+                                <>
+                                    <h3>Final Terms:</h3>
+                                    <p>Base Salary: ${currentSalaryOffer !== null ? currentSalaryOffer.toLocaleString() : "N/A"}</p>
+                                    <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
+                                    <p>Remote Work Days: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
+                                    <h3>Opponent's Bonus Objective:</h3>
+                                    <p>{getBonusObjectiveDescription(opponentBonusObjective, playerRole)}</p>
+                                </>
+                            )}
+                            <div className="modal-buttons">
+                                <button onClick={handleCloseGameOver} className="modal-button modal-cancel">Close</button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
+        </>
     );
 }
 
