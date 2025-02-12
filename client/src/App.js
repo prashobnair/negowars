@@ -429,13 +429,6 @@ function App() {
     };
 
     return (
-        <>
-        {isLoading && (
-            <div className="loading-overlay">
-                <div className="loading-spinner"></div>
-            </div>
-        )}
-
         <div className="chat-container">
             <div className="header">
                 <div className="status-badge">
@@ -496,62 +489,63 @@ function App() {
                     </div>
                 )}
             </div>
-            <div className="input-area">
-                <input
-                    type="text"
-                    value={messageInput}
-                    onChange={handleInputChange}
-                    onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !isChatDisabled) {
-                        sendMessage();
-                    }
-                    }}
-                    className="message-input"
-                    disabled={isChatDisabled}
-                    placeholder="Type your message..."
-                />
-                <button 
-                    onClick={sendMessage} 
-                    className="send-button" 
-                    disabled={isChatDisabled}
-                >
-                    <svg width="24" height="24" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                    </svg>
-                </button>
+            <div className="input-action-group">
+                <div className="input-area">
+                    <input
+                        type="text"
+                        value={messageInput}
+                        onChange={handleInputChange}
+                        onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !isChatDisabled) {
+                            sendMessage();
+                        }
+                        }}
+                        className="message-input"
+                        disabled={isChatDisabled}
+                        placeholder="Type your message..."
+                    />
+                    <button 
+                        onClick={sendMessage} 
+                        className="send-button" 
+                        disabled={isChatDisabled}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div className="action-buttons">
+                    <button 
+                        onClick={handleAccept} 
+                        className="action-button accept"
+                        disabled={!currentSalaryOffer || !lastOfferSender || lastOfferSender === myPlayerNumberRef.current}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                        Accept
+                    </button>
+                    <button 
+                        onClick={handleOffer} 
+                        className="action-button offer"
+                        disabled={isOfferDisabled}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                        Offer
+                    </button>
+                    <button 
+                        onClick={handleObjectives} 
+                        className="action-button objectives"
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                        </svg>
+                        Objectives
+                    </button>
+                </div>
             </div>
-            <div className="action-buttons">
-                <button 
-                    onClick={handleAccept} 
-                    className="action-button accept"
-                    disabled={!currentSalaryOffer || !lastOfferSender || lastOfferSender === myPlayerNumberRef.current}
-                >
-                    <svg width="24" height="24" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                    </svg>
-                    Accept
-                </button>
-                <button 
-                    onClick={handleOffer} 
-                    className="action-button offer"
-                    disabled={isOfferDisabled}
-                >
-                    <svg width="24" height="24" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                    </svg>
-                    Offer
-                </button>
-                <button 
-                    onClick={handleObjectives} 
-                    className="action-button objectives"
-                >
-                    <svg width="24" height="24" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-                    </svg>
-                    Objectives
-                </button>
-            </div>
-
             <AnimatePresence>
                 {isOfferModalOpen && (
                 
@@ -719,8 +713,12 @@ function App() {
                     </motion.div>
                 )}
             </AnimatePresence>
+            {isLoading && (
+                <div className="loading-overlay">
+                    <div className="loading-spinner"></div>
+                </div>
+            )}
         </div>
-        </>
     );
 }
 
