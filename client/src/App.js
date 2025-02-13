@@ -42,6 +42,9 @@ function App() {
 
     const [isLoading, setIsLoading] = useState(false);
 
+    const [isPulsing, setIsPulsing] = useState(false);
+
+
     // --- Define Objectives (Hardcoded for MVP) ---
     const candidatePrimaryObjectives = [
         "Achieve a base salary of at least $65,000.",
@@ -264,6 +267,16 @@ function App() {
         return () => clearInterval(timerInterval);
     }, [isTimerRunning, timeLeft]); // Add isTimerRunning and timeLeft to dependencies
 
+    // Add this effect to handle red phase pulsing
+    useEffect(() => {
+        if (timeLeft <= 60 && !isPulsing) {
+        setIsPulsing(true);
+        } else if (timeLeft > 60 && isPulsing) {
+        setIsPulsing(false);
+        }
+    }, [timeLeft, isPulsing]);
+  
+
     const sendMessage = () => {
         if (messageInput.trim() && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(messageInput);
@@ -455,32 +468,37 @@ function App() {
         <div className="chat-container">
             <div className="header">
                 <div className="status-badge">
-                    <span className="role-tag">{playerRole?.toUpperCase()}</span>
                     <span className="room-id">Room #{roomId}</span>
                 </div>
                 <div className="timer">
-                    <div className="timer-progress">
-                    <svg width="48" height="48">
+                    <div className={`timer-progress ${isPulsing ? 'pulse' : ''}`}>
+                        <svg width="48" height="48">
                         <circle
-                        cx="24"
-                        cy="24"
-                        r="20"
-                        className="timer-base"
-                        strokeWidth="4"
+                            cx="24"
+                            cy="24"
+                            r="20"
+                            className="timer-base"
+                            strokeWidth="4"
                         />
                         <circle
-                        cx="24"
-                        cy="24"
-                        r="20"
-                        className="timer-fill"
-                        strokeWidth="4"
-                        strokeDasharray={`${(timeLeft / 420) * 126} 126`}
-                        transform="rotate(-90 24 24)"
+                            cx="24"
+                            cy="24"
+                            r="20"
+                            className={`timer-fill ${
+                            timeLeft > 240 ? 'green' : 
+                            timeLeft > 60 ? 'orange' : 
+                            'red'
+                            }`}
+                            strokeWidth="4"
+                            strokeDasharray={`${(timeLeft / 420) * 126} 126`}
+                            transform="rotate(-90 24 24)"
                         />
-                    </svg>
+                        </svg>
                     </div>
                     <span className="timer-text">{formatTime(timeLeft)}</span>
                 </div>
+
+
             </div>
 
             {/* --- Current Offer Display --- */}
@@ -494,13 +512,7 @@ function App() {
             <div className="message-list" ref={messageListRef}>
                 {messages.map((msg, index) => (
                     <div key={index} className={`message ${msg.sender === 'me' ? 'my-message' : msg.sender === 'system' ? 'system-message' : 'other-message'}`}>
-                        {msg.sender !== "system" && (
-                            <span className="message-player">
-                                {msg.sender === 'me' ? 
-                                    playerRole.charAt(0).toUpperCase() + playerRole.slice(1) : 
-                                    msg.role}
-                            </span>
-                        )}
+                        
                         <span className="message-text">{msg.text}</span>
                     </div>
                 ))}
