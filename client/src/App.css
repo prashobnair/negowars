@@ -65,35 +65,17 @@ h1 {
   margin: 0;
 }
 
-/*
-.message-list {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0; /* Crucial for flex children */
-  /** contain: strict; /* Improve performance */
-/**}
-*/
-
 .message-list {
   flex: 1;
   overflow-y: auto;
   min-height: 100px;
-  padding: 1rem;
+  padding: 1rem 1rem 50px; /* Adds 50px bottom padding */
   margin: 0.5rem 0;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-/*
-.message {
-  max-width: 75%;
-  padding: 0.75rem 1rem;
-  border-radius: 1.25rem;
-  position: relative;
-  animation: messageAppear 0.3s ease;
-}
-*/
 .message {
   max-width: 70%;
   padding: 0.75rem 1rem;
@@ -103,11 +85,6 @@ h1 {
   position: relative;
 }
 
-/*
-.messages-container {
-  overflow-y: auto;
-}
-*/
 /* Message container to handle alignment */
 .messages-container {
   display: flex;
@@ -115,29 +92,6 @@ h1 {
   gap: 2px;
 }
 
-/*
-.my-message {
-  background: var(--primary);
-  color: white;
-  align-self: flex-end;
-  border-bottom-right-radius: 4px;
-}
-
-.other-message {
-  background: #EDF2F7;
-  color: var(--text);
-  align-self: flex-start;
-  border-bottom-left-radius: 4px;
-}
-
-.message-player {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  opacity: 0.8;
-}
-*/
 /* Your messages */
 .my-message {
   background-color: #007AFF;
@@ -317,18 +271,6 @@ button[class*="offer"] {
   color: white;
 }
 
-/*
-.system-message {
-  color: #555;
-  font-style: italic;
-  background-color: #f1f1f1;
-  padding: 0.75rem;
-  margin: 0.5rem 0;
-  border-radius: 8px;
-  clear: both;
-  width: 100%;
-  text-align: center;
-}*/
 .system-message {
   width: 100%;
   max-width: 100%;
@@ -428,21 +370,15 @@ button:disabled {
   font-weight: 600;
   color: var(--secondary);
 }
-
 /*
-.typing-indicator {
-  display: flex;
-  gap: 4px;
-  padding: 8px;
-}
-*/
-/* Typing indicator styling */
 .typing-indicator {
   align-self: flex-start;
   background-color: #E9E9EB;
   padding: 12px;
   border-radius: 18px;
   margin: 0.25rem 0;
+  display: flex;
+  gap: 4px;
 }
 
 .typing-indicator .dot {
@@ -450,22 +386,17 @@ button:disabled {
   height: 8px;
   background: #8E8E93;
   border-radius: 50%;
-  margin: 0 2px;
   display: inline-block;
   animation: bounce 1.4s infinite;
 }
 
-/*
-.dot {
-  width: 6px;
-  height: 6px;
-  background: #CBD5E0;
-  border-radius: 50%;
-  animation: bounce 1.4s infinite;
+.typing-indicator .dot:nth-child(2) {
+  animation-delay: 0.2s;
 }
 
-.dot:nth-child(2) { animation-delay: 0.2s; }
-.dot:nth-child(3) { animation-delay: 0.4s; }
+.typing-indicator .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
 */
 /* Read receipt style */
 .message-status {
@@ -536,4 +467,38 @@ button:disabled {
     max-width: 80%;
     padding: 0.6rem 0.8rem;
   }
+}
+
+.typing-bubble {
+  background-color: #E9E9EB;
+  color: #333;
+  padding: 12px 18px;
+  border-radius: 18px;
+  margin: 0.25rem 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-style: italic;
+  animation: messageAppear 0.2s ease-out;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  align-self: flex-start;
+  margin-right: auto;
+}
+
+.typing-bubble .dot {
+  width: 8px;
+  height: 8px;
+  background: #8E8E93;
+  border-radius: 50%;
+  display: inline-block;
+  animation: bounce 1.4s infinite;
+}
+
+.typing-bubble .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-bubble .dot:nth-child(3) {
+  animation-delay: 0.4s;
 }
