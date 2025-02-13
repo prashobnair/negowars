@@ -433,8 +433,20 @@ async def websocket_endpoint(websocket: WebSocket):
                     except (ValueError, IndexError) as e:
                         logger.error(f"Invalid offer format: {e}")
                         continue
-
-
+                # --- Handle Typing Status Updates ---
+                elif data.startswith("typing:"):
+                    _, is_typing_str = data.split(":", 1)
+                    is_typing = is_typing_str.lower() == "true"
+                    
+                    # Broadcast typing status to other players in the room
+                    for client in room["players"]:
+                        if client["websocket"] != websocket and client["is_active"]:
+                            try:
+                                # await client["websocket"].send_text(f"typing|{is_typing}|{current_client['player']}")
+                                await client["websocket"].send_text(f"typing|{is_typing}")
+                            except Exception as e:
+                                logger.error(f"Error sending typing status: {e}")
+                                client["is_active"] = False
                 # --- Handle "accept" Message ---
                 elif data == "accept":
                     message_id = str(uuid.uuid4())

@@ -147,6 +147,8 @@ function App() {
             } else if (messageType === "msg") {
                 const sender = parts[2];
                 const text = parts.slice(3).join("|");
+
+                setIsPartnerTyping(false); // Clear typing indicator when message received
                 console.log("Received chat message from:", sender, "text:", text);
                 setMessages((prev) => [
                     ...prev,
@@ -225,8 +227,9 @@ function App() {
                 setModalBonus('');
                 setModalRemoteDays('');
             } else if (messageType === "typing") {
-                const typingStatus = parts[1];
-                setIsPartnerTyping(typingStatus === "start");
+                    const isTypingStatus = parts[1].toLowerCase(); 
+                    setIsPartnerTyping(isTypingStatus === 'true'); 
+                    return; 
             } else if (messageType === "error") {
                 const errorMessage = parts.slice(1).join("|");
                 alert(errorMessage);  // Or handle the error in a more user-friendly way
@@ -264,6 +267,10 @@ function App() {
     const sendMessage = () => {
         if (messageInput.trim() && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(messageInput);
+            setMessageInput(''); // Clear input after sending
+            setIsTyping(false); // Reset typing status
+            socketRef.current.send("typing:false"); // Inform server typing stopped
+            clearTimeout(typingTimeout.current); // Clear any pending typing timeout
         }
     };
 
@@ -284,20 +291,36 @@ function App() {
 
     const handleInputChange = (e) => {
         setMessageInput(e.target.value);
-        if (!isTyping) {
-          socketRef.current.send("typing|start");
-          setIsTyping(true);
+        
+        // Only send typing status if we weren't already typing
+        if (!isTyping && e.target.value.trim()) {
+            socketRef.current.send("typing:true");
+            setIsTyping(true);
         }
+        
+        // Clear previous timeout
         clearTimeout(typingTimeout.current);
+        
+        // Set new timeout
         typingTimeout.current = setTimeout(() => {
-          setIsTyping(false);
-          socketRef.current.send("typing|stop");
+            if (isTyping) {
+                setIsTyping(false);
+                socketRef.current.send("typing:false");
+            }
         }, 1000);
-      };
+        
+        // If input is empty, stop typing immediately
+        if (!e.target.value.trim() && isTyping) {
+            setIsTyping(false);
+            socketRef.current.send("typing:false");
+            clearTimeout(typingTimeout.current);
+        }
+    };
 
     const handleObjectives = () => {
         setIsObjectivesModalOpen(true);
     };
+    
 
     const handleSubmitOffer = () => {
         console.log("Submit offer clicked");
@@ -467,25 +490,25 @@ function App() {
                 <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
                 <p>Remote Work Days Per Week: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
             </div>
-
+            
             <div className="message-list" ref={messageListRef}>
                 {messages.map((msg, index) => (
                     <div key={index} className={`message ${msg.sender === 'me' ? 'my-message' : msg.sender === 'system' ? 'system-message' : 'other-message'}`}>
-                    {msg.sender !== "system" && (
-                        <span className="message-player">
-                        {msg.sender === 'me' ? 
-                            playerRole.charAt(0).toUpperCase() + playerRole.slice(1) : 
-                            msg.role}: 
-                        </span>
-                    )}
-                    <span className="message-text">{msg.text}</span>
+                        {msg.sender !== "system" && (
+                            <span className="message-player">
+                                {msg.sender === 'me' ? 
+                                    playerRole.charAt(0).toUpperCase() + playerRole.slice(1) : 
+                                    msg.role}
+                            </span>
+                        )}
+                        <span className="message-text">{msg.text}</span>
                     </div>
                 ))}
                 {isPartnerTyping && (
-                    <div className="typing-indicator">
-                    <div className="dot"></div>
-                    <div className="dot"></div>
-                    <div className="dot"></div>
+                    <div className="typing-bubble">
+                        <div className="dot"></div>
+                        <div className="dot"></div>
+                        <div className="dot"></div>
                     </div>
                 )}
             </div>
