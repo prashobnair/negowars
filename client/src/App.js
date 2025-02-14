@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FaBullseye, FaCheck, FaClock, FaMoneyCheckAlt, FaHandshake } from 'react-icons/fa';
 
 function App() {
     const [messages, setMessages] = useState([]);
@@ -654,8 +655,8 @@ function App() {
                 )}
             </AnimatePresence>
             <AnimatePresence>
-                {isObjectivesModalOpen && (
-                    <motion.div
+            {isObjectivesModalOpen && (
+                <motion.div
                     className="modal-overlay"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -664,46 +665,52 @@ function App() {
                     style={{position: 'fixed', top: '0', left:'0', width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
                 >
                     <motion.div
-                        className="modal"
-                        initial={{ y: 50, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: 50, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        style={{backgroundColor: 'white', padding: '20px', borderRadius: '5px'}}
+                    className="modal objectives-content"
+                    initial={{ y: 50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 50, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{backgroundColor: 'white', padding: '20px', borderRadius: '5px'}}
                     >
-                            
-                            {playerRole === "candidate" && (
-                                <div>
-                                    <h3>Primary Objectives:</h3>
-                                    <ul>
-                                        {candidatePrimaryObjectives.map((objective, index) => (
-                                            <li key={index}>{objective}</li>
-                                        ))}
-                                    </ul>
-                                    <h3>Bonus Objective:</h3>
-                                    <p>{bonusObjective.description}</p>
-                                    <p>Bonus: {bonusObjective.bonus}</p>
-                                </div>
-                            )}
-                            {playerRole === "hr" && (
-                                <div>
-                                    <h3>Primary Objectives:</h3>
-                                    <ul>
-                                        {hrPrimaryObjectives.map((objective, index) => (
-                                            <li key={index}>{objective}</li>
-                                        ))}
-                                    </ul>
-                                    <h3>Bonus Objective:</h3>
-                                    <p>{bonusObjective.description}</p>
-                                    <p>Bonus: {bonusObjective.bonus}</p>
-                                </div>
-                            )}
-                            <div className="modal-buttons">
-                                <button onClick={handleCloseObjectives} className="modal-button modal-cancel">Close</button>
-                            </div>
-                        </motion.div>
+                    <div className="objectives-header">
+                        <FaBullseye className="objectives-icon" size={32} color="#2b6cb0" />
+                        <h2 className="objectives-title">{playerRole === "candidate" ? "Candidate Objectives" : "HR Objectives"}</h2>
+                    </div>
+
+                    <div className="objectives-section">
+                        <h3 className="section-title">
+                        <FaCheck className="section-icon" /> Primary Goals
+                        </h3>
+                        <ul className="key-points">
+                        {(playerRole === "candidate" ? candidatePrimaryObjectives : hrPrimaryObjectives).map((objective, index) => (
+                            <li className="key-point" key={index}>
+                            <FaCheck className="key-point-icon" />
+                            <span>{objective}</span>
+                            </li>
+                        ))}
+                        </ul>
+                    </div>
+
+                    <div className="objectives-section">
+                        <h3 className="section-title">
+                        <FaMoneyCheckAlt className="section-icon" /> Bonus Objective
+                        </h3>
+                        <div className="bonus-card">
+                        <FaHandshake className="bonus-icon" />
+                        <div>
+                            <p className="bonus-description">{bonusObjective.description}</p>
+                            <p className="bonus-points">{bonusObjective.bonus}</p>
+                        </div>
+                        </div>
+                    </div>
+
+                    <div className="modal-buttons">
+                        <button onClick={handleCloseObjectives} className="modal-button modal-cancel">Close</button>
+                    </div>
                     </motion.div>
-                )}
+                </motion.div>
+            )}
+
             </AnimatePresence>
             {/* --- Game Over Modal --- */}
             <AnimatePresence>
