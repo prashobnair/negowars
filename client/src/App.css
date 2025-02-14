@@ -618,6 +618,7 @@ button:disabled {
   gap: 1.5rem;
 }
 
+/*
 .input-container {
   display: flex;
   align-items: center;
@@ -627,6 +628,10 @@ button:disabled {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   transition: transform 0.2s ease;
+}*/
+
+.input-container {
+  position: relative;
 }
 
 .input-container:hover {
@@ -643,11 +648,18 @@ button:disabled {
   flex-grow: 1;
 }
 
+/*
 .input-wrapper label {
   display: block;
   margin-bottom: 0.5rem;
   color: #2d3748;
   font-weight: 500;
+}*/
+.input-wrapper label {
+  display: block;
+  font-weight: 500;
+  color: #2d3748;
+  margin-bottom: 0.75rem;
 }
 
 .input-wrapper input {
@@ -729,4 +741,84 @@ button:disabled {
   .secondary-btn {
     justify-content: center;
   }
+
+  input[type="range"] {
+    margin: 0.8rem 0;
+  }
+  
+  .range-labels {
+    font-size: 0.75rem;
+  }
+}
+
+/* Range Slider Styles */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e2e8f0;
+  margin: 1rem 0;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #4299e1;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+input[type="range"]::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #4299e1;
+  cursor: pointer;
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  background: #3182ce;
+}
+
+.range-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #718096;
+  margin-top: -0.5rem;
+}
+
+/* Add track fill color */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  background: #c3dafe;
+  border-radius: 3px;
+}
+
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  background: #c3dafe;
+  border-radius: 3px;
+}
+
+/* Add focus states */
+input[type="range"]:focus {
+  outline: none;
+}
+
+input[type="range"]:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(66, 153, 225, 0.2);
+}
+
+.current-value {
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 600;
+  color: #2b6cb0;
 }

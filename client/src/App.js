@@ -31,10 +31,24 @@ function App() {
     const [currentRemoteDaysOffer, setCurrentRemoteDaysOffer] = useState(null);
 
     // --- State for Offer Modal Input ---
-    const [modalSalary, setModalSalary] = useState('');
-    const [modalBonus, setModalBonus] = useState('');
-    const [modalRemoteDays, setModalRemoteDays] = useState('');
-
+    const [modalSalary, setModalSalary] = useState(65000);
+    const [modalBonus, setModalBonus] = useState(5000);
+    const [modalRemoteDays, setModalRemoteDays] = useState(2);
+    // Add validation setters
+    const setValidatedSalary = (value) => {
+        const numValue = parseInt(value);
+        setModalSalary(Math.max(0, Math.min(numValue, 1000000)));
+    };
+    
+    const setValidatedBonus = (value) => {
+        const numValue = parseInt(value);
+        setModalBonus(Math.max(0, Math.min(numValue, 20000)));
+    };
+    
+    const setValidatedRemoteDays = (value) => {
+        const numValue = parseInt(value);
+        setModalRemoteDays(Math.max(0, Math.min(numValue, 5)));
+    };
     // --- State for Timer ---
     const [timeLeft, setTimeLeft] = useState(7 * 60); // Set your desired timer duration
     const [isTimerRunning, setIsTimerRunning] = useState(false); // State to manage timer
@@ -90,7 +104,14 @@ function App() {
     const [isTyping, setIsTyping] = useState(false);
     const [isPartnerTyping, setIsPartnerTyping] = useState(false);
     const typingTimeout = useRef();
-
+      
+    const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0
+    }).format(value);
+    };
     // useEffect to scroll to the bottom whenever messages change
     useEffect(() => {
         if (messageListRef.current) {
@@ -615,42 +636,66 @@ function App() {
                         <div className="input-container">
                         <FaDollarSign className="input-icon" />
                         <div className="input-wrapper">
-                            <label htmlFor="modalSalary">Base Salary</label>
+                            <label htmlFor="modalSalary">
+                                Base Salary: {formatCurrency(modalSalary)}
+                            </label>
                             <input
-                            type="number"
-                            id="modalSalary"
-                            value={modalSalary}
-                            onChange={(e) => setModalSalary(e.target.value)}
-                            placeholder="50,000"
+                                type="range"
+                                id="modalSalary"
+                                min="0"
+                                max="1000000"
+                                step="5000"
+                                value={modalSalary}
+                                onChange={(e) => setValidatedSalary(e.target.value)}
                             />
+                            <div className="range-labels">
+                                <span>$50k</span>
+                                <span>$1M</span>
+                            </div>
                         </div>
                         </div>
 
                         <div className="input-container">
                         <FaGift className="input-icon" />
                         <div className="input-wrapper">
-                            <label htmlFor="modalBonus">Sign-On Bonus</label>
+                            <label htmlFor="modalBonus">
+                                Sign-On Bonus: {formatCurrency(modalBonus)}
+                            </label>
                             <input
-                            type="number"
-                            id="modalBonus"
-                            value={modalBonus}
-                            onChange={(e) => setModalBonus(e.target.value)}
-                            placeholder="1,000"
+                                type="range"
+                                id="modalBonus"
+                                min="0"
+                                max="20000"
+                                step="500"
+                                value={modalBonus}
+                                onChange={(e) => setValidatedBonus(e.target.value)}
                             />
+                            <div className="range-labels">
+                                <span>$0</span>
+                                <span>$20k</span>
+                            </div>
                         </div>
                         </div>
 
                         <div className="input-container">
                         <FaHome className="input-icon" />
                         <div className="input-wrapper">
-                            <label htmlFor="modalRemoteDays">Remote Days/Week</label>
+                            <label htmlFor="modalRemoteDays">
+                                Remote Days: {modalRemoteDays} days/week
+                            </label>
                             <input
-                            type="number"
-                            id="modalRemoteDays"
-                            value={modalRemoteDays}
-                            onChange={(e) => setModalRemoteDays(e.target.value)}
-                            placeholder="0"
+                                type="range"
+                                id="modalRemoteDays"
+                                min="0"
+                                max="5"
+                                step="1"
+                                value={modalRemoteDays}
+                                onChange={(e) => setModalRemoteDays(parseInt(e.target.value))}
                             />
+                            <div className="range-labels">
+                                <span>0</span>
+                                <span>5</span>
+                            </div>
                         </div>
                         </div>
                     </div>
