@@ -1,6 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FaBullseye, FaCheck, FaClock, FaMoneyCheckAlt, FaHandshake } from 'react-icons/fa';
+
+import { 
+    FaDollarSign, 
+    FaGift, 
+    FaHome, 
+    FaPaperPlane, 
+    FaTimes 
+  } from 'react-icons/fa';
+  
 
 function App() {
     const [messages, setMessages] = useState([]);
@@ -21,10 +31,24 @@ function App() {
     const [currentRemoteDaysOffer, setCurrentRemoteDaysOffer] = useState(null);
 
     // --- State for Offer Modal Input ---
-    const [modalSalary, setModalSalary] = useState('');
-    const [modalBonus, setModalBonus] = useState('');
-    const [modalRemoteDays, setModalRemoteDays] = useState('');
-
+    const [modalSalary, setModalSalary] = useState(0);
+    const [modalBonus, setModalBonus] = useState(0);
+    const [modalRemoteDays, setModalRemoteDays] = useState(0);
+    // Add validation setters
+    const setValidatedSalary = (value) => {
+        const numValue = parseInt(value);
+        setModalSalary(Math.max(0, Math.min(numValue, 1000000)));
+    };
+    
+    const setValidatedBonus = (value) => {
+        const numValue = parseInt(value);
+        setModalBonus(Math.max(0, Math.min(numValue, 20000)));
+    };
+    
+    const setValidatedRemoteDays = (value) => {
+        const numValue = parseInt(value);
+        setModalRemoteDays(Math.max(0, Math.min(numValue, 5)));
+    };
     // --- State for Timer ---
     const [timeLeft, setTimeLeft] = useState(7 * 60); // Set your desired timer duration
     const [isTimerRunning, setIsTimerRunning] = useState(false); // State to manage timer
@@ -80,7 +104,14 @@ function App() {
     const [isTyping, setIsTyping] = useState(false);
     const [isPartnerTyping, setIsPartnerTyping] = useState(false);
     const typingTimeout = useRef();
-
+      
+    const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0
+    }).format(value);
+    };
     // useEffect to scroll to the bottom whenever messages change
     useEffect(() => {
         if (messageListRef.current) {
@@ -582,80 +613,157 @@ function App() {
                 </div>
             </div>
             <AnimatePresence>
-                {isOfferModalOpen && (
-                
-                    <motion.div
+            {isOfferModalOpen && (
+                <motion.div
                     className="modal-overlay"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }} // Optional: Add a transition duration
-                    style={{position: 'fixed', top: '0', left:'0', width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
+                    transition={{ duration: 0.2 }}
+                >
+                    <motion.div 
+                    className="modal offer-modal-content"
+                    initial={{ y: 50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 50, opacity: 0 }}
                     >
-                    <motion.div
-                        className="modal"
-                        initial={{ y: 50, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: 50, opacity: 0 }}
-                        transition={{ duration: 0.2 }} // Optional: Add a transition duration
-                        style={{backgroundColor: 'white', padding: '20px', borderRadius: '5px'}}
-                    >
+                    <div className="offer-header">
+                        <FaHandshake className="offer-icon" />
                         <h2>Make an Offer</h2>
-                        <div className="input-group">
-                            <label htmlFor="modalSalary">Base Salary ($)</label>
-                            <input
-                                type="number"
-                                id="modalSalary"
-                                value={modalSalary}
-                                onChange={(e) => setModalSalary(e.target.value)}
-                                className="modal-input"
-                                placeholder="65000"
-                            />
+                    </div>
+
+                    <div className="offer-input-group">
+                        <div className="input-container">
+                        <FaDollarSign className="input-icon" />
+
+                        <div className="input-wrapper">
+                            <label htmlFor="modalSalary">
+                                Base Salary: {formatCurrency(modalSalary)}
+                            </label>
+                            <div className="slider-input-group">
+                                <input
+                                    type="range"
+                                    id="modalSalary"
+                                    min="50000"
+                                    max="100000"
+                                    step="1000"
+                                    value={modalSalary}
+                                    onChange={(e) => setValidatedSalary(e.target.value)}
+                                />
+                                <div className="direct-input-container">
+                                    <input
+                                    type="number"
+                                    value={modalSalary}
+                                    min="50000"
+                                    max="100000"
+                                    onChange={(e) => setValidatedSalary(e.target.value)}
+                                    className="direct-input"
+                                    />
+                                    <span className="currency-symbol">USD</span>
+                                </div>
+                            </div>
+                            <div className="range-labels">
+                            <span>{formatCurrency(50000)}</span>
+                            <span>{formatCurrency(100000)}</span>
+                            </div>
                         </div>
-                        <div className="input-group">
-                            <label htmlFor="modalBonus">Sign-On Bonus ($)</label>
+                        </div>
+
+                        <div className="input-container">
+                        <FaGift className="input-icon" />
+                        <div className="input-wrapper">
+                        <label htmlFor="modalBonus">
+                            Sign-On Bonus: {formatCurrency(modalBonus)}
+                            </label>
+                            <div className="slider-input-group">
                             <input
-                                type="number"
+                                type="range"
                                 id="modalBonus"
+                                min="0"
+                                max="20000"
+                                step="500"
                                 value={modalBonus}
-                                onChange={(e) => setModalBonus(e.target.value)}
-                                className="modal-input"
-                                placeholder="65000"
+                                onChange={(e) => setValidatedBonus(e.target.value)}
                             />
-                        </div>
-                        <div className="input-group">
-                            <label htmlFor="modalRemoteDays">Remote Work Days Per Week</label>
-                            <input
+                            <div className="direct-input-container">
+                                <input
                                 type="number"
+                                value={modalBonus}
+                                min="0"
+                                max="20000"
+                                onChange={(e) => setValidatedBonus(e.target.value)}
+                                className="direct-input"
+                                />
+                                <span className="currency-symbol">USD</span>
+                            </div>
+                            </div>
+                            <div className="range-labels">
+                            <span>{formatCurrency(0)}</span>
+                            <span>{formatCurrency(20000)}</span>
+                            </div>
+                        </div>
+                        </div>
+
+                        <div className="input-container">
+                        <FaHome className="input-icon" />
+                        <div className="input-wrapper">
+                        <label htmlFor="modalRemoteDays">
+                            Remote Days: {modalRemoteDays} days/week
+                            </label>
+                            <div className="slider-input-group">
+                            <input
+                                type="range"
                                 id="modalRemoteDays"
+                                min="0"
+                                max="5"
+                                step="1"
                                 value={modalRemoteDays}
-                                onChange={(e) => setModalRemoteDays(e.target.value)}
-                                className="modal-input"
-                                placeholder="65000"
+                                onChange={(e) => setValidatedRemoteDays(e.target.value)}
                             />
+                            <div className="direct-input-container">
+                                <input
+                                type="number"
+                                value={modalRemoteDays}
+                                min="0"
+                                max="5"
+                                onChange={(e) => setValidatedRemoteDays(e.target.value)}
+                                className="direct-input"
+                                />
+                                <span className="days-label">days</span>
+                            </div>
+                            </div>
+                            <div className="range-labels">
+                            <span>0</span>
+                            <span>5</span>
+                            </div>
                         </div>
-                        
-                        <div className="modal-buttons">
-                            <button 
-                                onClick={handleSubmitOffer} 
-                                className="modal-button modal-submit"
-                            >
-                                Submit Offer
-                            </button>
-                            <button 
-                                onClick={handleCancelOffer} 
-                                className="modal-button modal-cancel"
-                            >
-                                Cancel
-                            </button>
                         </div>
-                        </motion.div>
+                    </div>
+
+                    <div className="modal-actions">
+                        <button 
+                        onClick={handleSubmitOffer} 
+                        className="modal-button primary-btn"
+                        >
+                        <FaPaperPlane className="btn-icon" />
+                        Submit Offer
+                        </button>
+                        <button 
+                        onClick={handleCancelOffer} 
+                        className="modal-button secondary-btn"
+                        >
+                        <FaTimes className="btn-icon" />
+                        Cancel
+                        </button>
+                    </div>
                     </motion.div>
-                )}
+                </motion.div>
+            )}
+
             </AnimatePresence>
             <AnimatePresence>
-                {isObjectivesModalOpen && (
-                    <motion.div
+            {isObjectivesModalOpen && (
+                <motion.div
                     className="modal-overlay"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -664,46 +772,52 @@ function App() {
                     style={{position: 'fixed', top: '0', left:'0', width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
                 >
                     <motion.div
-                        className="modal"
-                        initial={{ y: 50, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: 50, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        style={{backgroundColor: 'white', padding: '20px', borderRadius: '5px'}}
+                    className="modal objectives-content"
+                    initial={{ y: 50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 50, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{backgroundColor: 'white', padding: '20px', borderRadius: '5px'}}
                     >
-                            
-                            {playerRole === "candidate" && (
-                                <div>
-                                    <h3>Primary Objectives:</h3>
-                                    <ul>
-                                        {candidatePrimaryObjectives.map((objective, index) => (
-                                            <li key={index}>{objective}</li>
-                                        ))}
-                                    </ul>
-                                    <h3>Bonus Objective:</h3>
-                                    <p>{bonusObjective.description}</p>
-                                    <p>Bonus: {bonusObjective.bonus}</p>
-                                </div>
-                            )}
-                            {playerRole === "hr" && (
-                                <div>
-                                    <h3>Primary Objectives:</h3>
-                                    <ul>
-                                        {hrPrimaryObjectives.map((objective, index) => (
-                                            <li key={index}>{objective}</li>
-                                        ))}
-                                    </ul>
-                                    <h3>Bonus Objective:</h3>
-                                    <p>{bonusObjective.description}</p>
-                                    <p>Bonus: {bonusObjective.bonus}</p>
-                                </div>
-                            )}
-                            <div className="modal-buttons">
-                                <button onClick={handleCloseObjectives} className="modal-button modal-cancel">Close</button>
-                            </div>
-                        </motion.div>
+                    <div className="objectives-header">
+                        <FaBullseye className="objectives-icon" size={32} color="#2b6cb0" />
+                        <h2 className="objectives-title">{playerRole === "candidate" ? "Candidate Objectives" : "HR Objectives"}</h2>
+                    </div>
+
+                    <div className="objectives-section">
+                        <h3 className="section-title">
+                        <FaCheck className="section-icon" /> Primary Goals
+                        </h3>
+                        <ul className="key-points">
+                        {(playerRole === "candidate" ? candidatePrimaryObjectives : hrPrimaryObjectives).map((objective, index) => (
+                            <li className="key-point" key={index}>
+                            <FaCheck className="key-point-icon" />
+                            <span>{objective}</span>
+                            </li>
+                        ))}
+                        </ul>
+                    </div>
+
+                    <div className="objectives-section">
+                        <h3 className="section-title">
+                        <FaMoneyCheckAlt className="section-icon" /> Bonus Objective
+                        </h3>
+                        <div className="bonus-card">
+                        <FaHandshake className="bonus-icon" />
+                        <div>
+                            <p className="bonus-description">{bonusObjective.description}</p>
+                            <p className="bonus-points">{bonusObjective.bonus}</p>
+                        </div>
+                        </div>
+                    </div>
+
+                    <div className="modal-buttons">
+                        <button onClick={handleCloseObjectives} className="modal-button modal-cancel">Close</button>
+                    </div>
                     </motion.div>
-                )}
+                </motion.div>
+            )}
+
             </AnimatePresence>
             {/* --- Game Over Modal --- */}
             <AnimatePresence>
