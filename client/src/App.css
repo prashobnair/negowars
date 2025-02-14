@@ -513,7 +513,6 @@ button:disabled {
 
 .objectives-header {
   display: flex;
-  align-items: center;
   gap: 1rem;
   margin-bottom: 2rem;
 }
@@ -593,3 +592,141 @@ button:disabled {
   font-weight: 500;
 }
 
+/* Enhanced Offer Modal Styles */
+.offer-modal-content {
+  padding: 2rem;
+  max-width: 500px;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+.offer-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.offer-icon {
+  color: #2b6cb0;
+  font-size: 1.8rem;
+}
+
+.offer-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.input-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
+}
+
+.input-container:hover {
+  transform: translateX(5px);
+}
+
+.input-icon {
+  color: #718096;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.input-wrapper {
+  flex-grow: 1;
+}
+
+.input-wrapper label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #2d3748;
+  font-weight: 500;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.input-wrapper input:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.primary-btn {
+  background: #4299e1;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+}
+
+.primary-btn:hover {
+  background: #3182ce;
+}
+
+.secondary-btn {
+  background: #e2e8f0;
+  color: #2d3748;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+}
+
+.secondary-btn:hover {
+  background: #cbd5e0;
+}
+
+.btn-icon {
+  font-size: 1.1rem;
+}
+
+/* Add this under your existing media queries */
+@media (max-width: 480px) {
+  .offer-modal-content {
+    padding: 1.5rem;
+    width: 90%;
+  }
+  
+  .input-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .input-icon {
+    margin-bottom: 0.5rem;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+  
+  .primary-btn,
+  .secondary-btn {
+    justify-content: center;
+  }
+}

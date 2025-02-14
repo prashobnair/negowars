@@ -3,6 +3,15 @@ import './App.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaBullseye, FaCheck, FaClock, FaMoneyCheckAlt, FaHandshake } from 'react-icons/fa';
 
+import { 
+    FaDollarSign, 
+    FaGift, 
+    FaHome, 
+    FaPaperPlane, 
+    FaTimes 
+  } from 'react-icons/fa';
+  
+
 function App() {
     const [messages, setMessages] = useState([]);
     const [messageInput, setMessageInput] = useState('');
@@ -583,76 +592,89 @@ function App() {
                 </div>
             </div>
             <AnimatePresence>
-                {isOfferModalOpen && (
-                
-                    <motion.div
+            {isOfferModalOpen && (
+                <motion.div
                     className="modal-overlay"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }} // Optional: Add a transition duration
-                    style={{position: 'fixed', top: '0', left:'0', width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
+                    transition={{ duration: 0.2 }}
+                >
+                    <motion.div 
+                    className="modal offer-modal-content"
+                    initial={{ y: 50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 50, opacity: 0 }}
                     >
-                    <motion.div
-                        className="modal"
-                        initial={{ y: 50, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: 50, opacity: 0 }}
-                        transition={{ duration: 0.2 }} // Optional: Add a transition duration
-                        style={{backgroundColor: 'white', padding: '20px', borderRadius: '5px'}}
-                    >
+                    <div className="offer-header">
+                        <FaHandshake className="offer-icon" />
                         <h2>Make an Offer</h2>
-                        <div className="input-group">
-                            <label htmlFor="modalSalary">Base Salary ($)</label>
+                    </div>
+
+                    <div className="offer-input-group">
+                        <div className="input-container">
+                        <FaDollarSign className="input-icon" />
+                        <div className="input-wrapper">
+                            <label htmlFor="modalSalary">Base Salary</label>
                             <input
-                                type="number"
-                                id="modalSalary"
-                                value={modalSalary}
-                                onChange={(e) => setModalSalary(e.target.value)}
-                                className="modal-input"
-                                placeholder="65000"
+                            type="number"
+                            id="modalSalary"
+                            value={modalSalary}
+                            onChange={(e) => setModalSalary(e.target.value)}
+                            placeholder="50,000"
                             />
                         </div>
-                        <div className="input-group">
-                            <label htmlFor="modalBonus">Sign-On Bonus ($)</label>
+                        </div>
+
+                        <div className="input-container">
+                        <FaGift className="input-icon" />
+                        <div className="input-wrapper">
+                            <label htmlFor="modalBonus">Sign-On Bonus</label>
                             <input
-                                type="number"
-                                id="modalBonus"
-                                value={modalBonus}
-                                onChange={(e) => setModalBonus(e.target.value)}
-                                className="modal-input"
-                                placeholder="65000"
+                            type="number"
+                            id="modalBonus"
+                            value={modalBonus}
+                            onChange={(e) => setModalBonus(e.target.value)}
+                            placeholder="1,000"
                             />
                         </div>
-                        <div className="input-group">
-                            <label htmlFor="modalRemoteDays">Remote Work Days Per Week</label>
+                        </div>
+
+                        <div className="input-container">
+                        <FaHome className="input-icon" />
+                        <div className="input-wrapper">
+                            <label htmlFor="modalRemoteDays">Remote Days/Week</label>
                             <input
-                                type="number"
-                                id="modalRemoteDays"
-                                value={modalRemoteDays}
-                                onChange={(e) => setModalRemoteDays(e.target.value)}
-                                className="modal-input"
-                                placeholder="65000"
+                            type="number"
+                            id="modalRemoteDays"
+                            value={modalRemoteDays}
+                            onChange={(e) => setModalRemoteDays(e.target.value)}
+                            placeholder="0"
                             />
                         </div>
-                        
-                        <div className="modal-buttons">
-                            <button 
-                                onClick={handleSubmitOffer} 
-                                className="modal-button modal-submit"
-                            >
-                                Submit Offer
-                            </button>
-                            <button 
-                                onClick={handleCancelOffer} 
-                                className="modal-button modal-cancel"
-                            >
-                                Cancel
-                            </button>
                         </div>
-                        </motion.div>
+                    </div>
+
+                    <div className="modal-actions">
+                        <button 
+                        onClick={handleSubmitOffer} 
+                        className="modal-button primary-btn"
+                        >
+                        <FaPaperPlane className="btn-icon" />
+                        Submit Offer
+                        </button>
+                        <button 
+                        onClick={handleCancelOffer} 
+                        className="modal-button secondary-btn"
+                        >
+                        <FaTimes className="btn-icon" />
+                        Cancel
+                        </button>
+                    </div>
                     </motion.div>
-                )}
+                </motion.div>
+            )}
+
             </AnimatePresence>
             <AnimatePresence>
             {isObjectivesModalOpen && (
