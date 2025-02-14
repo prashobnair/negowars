@@ -31,9 +31,9 @@ function App() {
     const [currentRemoteDaysOffer, setCurrentRemoteDaysOffer] = useState(null);
 
     // --- State for Offer Modal Input ---
-    const [modalSalary, setModalSalary] = useState(65000);
-    const [modalBonus, setModalBonus] = useState(5000);
-    const [modalRemoteDays, setModalRemoteDays] = useState(2);
+    const [modalSalary, setModalSalary] = useState(0);
+    const [modalBonus, setModalBonus] = useState(0);
+    const [modalRemoteDays, setModalRemoteDays] = useState(0);
     // Add validation setters
     const setValidatedSalary = (value) => {
         const numValue = parseInt(value);
@@ -635,22 +635,36 @@ function App() {
                     <div className="offer-input-group">
                         <div className="input-container">
                         <FaDollarSign className="input-icon" />
+
                         <div className="input-wrapper">
                             <label htmlFor="modalSalary">
                                 Base Salary: {formatCurrency(modalSalary)}
                             </label>
-                            <input
-                                type="range"
-                                id="modalSalary"
-                                min="0"
-                                max="1000000"
-                                step="5000"
-                                value={modalSalary}
-                                onChange={(e) => setValidatedSalary(e.target.value)}
-                            />
+                            <div className="slider-input-group">
+                                <input
+                                    type="range"
+                                    id="modalSalary"
+                                    min="50000"
+                                    max="100000"
+                                    step="1000"
+                                    value={modalSalary}
+                                    onChange={(e) => setValidatedSalary(e.target.value)}
+                                />
+                                <div className="direct-input-container">
+                                    <input
+                                    type="number"
+                                    value={modalSalary}
+                                    min="50000"
+                                    max="100000"
+                                    onChange={(e) => setValidatedSalary(e.target.value)}
+                                    className="direct-input"
+                                    />
+                                    <span className="currency-symbol">USD</span>
+                                </div>
+                            </div>
                             <div className="range-labels">
-                                <span>$50k</span>
-                                <span>$1M</span>
+                            <span>{formatCurrency(50000)}</span>
+                            <span>{formatCurrency(100000)}</span>
                             </div>
                         </div>
                         </div>
@@ -658,9 +672,10 @@ function App() {
                         <div className="input-container">
                         <FaGift className="input-icon" />
                         <div className="input-wrapper">
-                            <label htmlFor="modalBonus">
-                                Sign-On Bonus: {formatCurrency(modalBonus)}
+                        <label htmlFor="modalBonus">
+                            Sign-On Bonus: {formatCurrency(modalBonus)}
                             </label>
+                            <div className="slider-input-group">
                             <input
                                 type="range"
                                 id="modalBonus"
@@ -670,9 +685,21 @@ function App() {
                                 value={modalBonus}
                                 onChange={(e) => setValidatedBonus(e.target.value)}
                             />
+                            <div className="direct-input-container">
+                                <input
+                                type="number"
+                                value={modalBonus}
+                                min="0"
+                                max="20000"
+                                onChange={(e) => setValidatedBonus(e.target.value)}
+                                className="direct-input"
+                                />
+                                <span className="currency-symbol">USD</span>
+                            </div>
+                            </div>
                             <div className="range-labels">
-                                <span>$0</span>
-                                <span>$20k</span>
+                            <span>{formatCurrency(0)}</span>
+                            <span>{formatCurrency(20000)}</span>
                             </div>
                         </div>
                         </div>
@@ -680,9 +707,10 @@ function App() {
                         <div className="input-container">
                         <FaHome className="input-icon" />
                         <div className="input-wrapper">
-                            <label htmlFor="modalRemoteDays">
-                                Remote Days: {modalRemoteDays} days/week
+                        <label htmlFor="modalRemoteDays">
+                            Remote Days: {modalRemoteDays} days/week
                             </label>
+                            <div className="slider-input-group">
                             <input
                                 type="range"
                                 id="modalRemoteDays"
@@ -690,11 +718,23 @@ function App() {
                                 max="5"
                                 step="1"
                                 value={modalRemoteDays}
-                                onChange={(e) => setModalRemoteDays(parseInt(e.target.value))}
+                                onChange={(e) => setValidatedRemoteDays(e.target.value)}
                             />
+                            <div className="direct-input-container">
+                                <input
+                                type="number"
+                                value={modalRemoteDays}
+                                min="0"
+                                max="5"
+                                onChange={(e) => setValidatedRemoteDays(e.target.value)}
+                                className="direct-input"
+                                />
+                                <span className="days-label">days</span>
+                            </div>
+                            </div>
                             <div className="range-labels">
-                                <span>0</span>
-                                <span>5</span>
+                            <span>0</span>
+                            <span>5</span>
                             </div>
                         </div>
                         </div>

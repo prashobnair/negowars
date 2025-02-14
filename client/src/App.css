@@ -239,14 +239,14 @@ button[class*="offer"] {
   font-size: clamp(0.9rem, 2.5vw, 1rem);
 }
 
-.modal-input {
+/*.modal-input {
   width: 100%;
   padding: 0.75rem;
   border: 2px solid #E2E8F0;
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.2s;
-}
+}*/
 
 .modal-buttons {
   display: flex;
@@ -749,6 +749,15 @@ button:disabled {
   .range-labels {
     font-size: 0.75rem;
   }
+
+  .slider-input-group {
+    flex-direction: column;
+  }
+  
+  .direct-input-container {
+    width: 100%;
+  }
+  
 }
 
 /* Range Slider Styles */
@@ -821,4 +830,34 @@ input[type="range"]:focus::-webkit-slider-thumb {
   transform: translateY(-50%);
   font-weight: 600;
   color: #2b6cb0;
+}
+
+.slider-input-group {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.direct-input-container {
+  position: relative;
+  width: 120px;
+}
+
+.direct-input {
+  width: 100%;
+  padding: 0.5rem 2rem 0.5rem 1rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.currency-symbol,
+.days-label {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #718096;
+  pointer-events: none;
 }
