@@ -239,15 +239,6 @@ button[class*="offer"] {
   font-size: clamp(0.9rem, 2.5vw, 1rem);
 }
 
-/*.modal-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.2s;
-}*/
-
 .modal-buttons {
   display: flex;
   gap: 0.5rem;
@@ -617,20 +608,9 @@ button:disabled {
   gap: 1.5rem;
 }
 
-/*
-.input-container {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: white;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  transition: transform 0.2s ease;
-}*/
-
 .input-container {
   position: relative;
+  flex-shrink: 0;
 }
 
 .input-container:hover {
@@ -647,13 +627,6 @@ button:disabled {
   flex-grow: 1;
 }
 
-/*
-.input-wrapper label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #2d3748;
-  font-weight: 500;
-}*/
 .input-wrapper label {
   display: block;
   font-weight: 500;

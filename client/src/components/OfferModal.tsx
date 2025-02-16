@@ -7,7 +7,9 @@ import {
     FaHome,
     FaPaperPlane,
     FaTimes,
-    FaHandshake
+    FaHandshake,
+    FaMoneyCheckAlt,
+    FaCalendarAlt
 } from 'react-icons/fa';
 import { ModalInputs } from '../types';
 
