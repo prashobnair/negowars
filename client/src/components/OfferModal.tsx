@@ -36,6 +36,9 @@ const OfferModal: React.FC<OfferModalProps> = ({
         remoteDays: ''
     });
 
+    // New state for tracking which field is being edited
+    const [editingField, setEditingField] = useState<keyof ModalInputs | null>(null);
+
      // Updated Validation Setter
     const setValidatedInput = (field: keyof ModalInputs, value: string) => {
       let numValue = parseInt(value);
@@ -67,6 +70,11 @@ const OfferModal: React.FC<OfferModalProps> = ({
 
     };
 
+    // New handler for inline editing
+    const handleValueClick = (field: keyof ModalInputs) => {
+        setEditingField(field);
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -89,12 +97,31 @@ const OfferModal: React.FC<OfferModalProps> = ({
                 </div>
 
                 <div className="offer-input-group">
-                    {/* --- Salary Input --- */}
+                    {/* --- Updated Salary Input --- */}
                     <div className="input-container">
                         <FaDollarSign className="input-icon" />
                         <div className="input-wrapper">
                             <label htmlFor="modalSalary">
-                                Base Salary: {formatCurrency(modalInputs.salary)}
+                                Base Salary: 
+                                {editingField === 'salary' ? (
+                                    <input
+                                        type="number"
+                                        value={modalInputs.salary}
+                                        onChange={(e) => setValidatedInput('salary', e.target.value)}
+                                        onBlur={() => setEditingField(null)}
+                                        autoFocus
+                                        className="inline-edit-input"
+                                        min="50000"
+                                        max="1000000"
+                                    />
+                                ) : (
+                                    <span 
+                                        className="editable-value" 
+                                        onClick={() => handleValueClick('salary')}
+                                    >
+                                        {formatCurrency(modalInputs.salary)}
+                                    </span>
+                                )}
                             </label>
                             <div className="slider-input-group">
                                 <input
@@ -106,21 +133,6 @@ const OfferModal: React.FC<OfferModalProps> = ({
                                     value={modalInputs.salary}
                                     onChange={(e) => setValidatedInput('salary', e.target.value)}
                                 />
-                                <div className="direct-input-container">
-                                    <input
-                                        type="number"
-                                        value={modalInputs.salary}
-                                        min="50000"
-                                        max="1000000"
-                                        onChange={(e) => setValidatedInput('salary', e.target.value)}
-                                        className="direct-input"
-                                    />
-                                    <span className="currency-symbol">USD</span>
-                                </div>
-                            </div>
-                            <div className="range-labels">
-                                <span>{formatCurrency(50000)}</span>
-                                <span>{formatCurrency(1000000)}</span>
                             </div>
                              {/* Display Salary Error */}
                             <div className="validation-messages">
@@ -129,12 +141,31 @@ const OfferModal: React.FC<OfferModalProps> = ({
                         </div>
                     </div>
 
-                    {/* --- Bonus Input --- */}
+                    {/* --- Updated Bonus Input --- */}
                     <div className="input-container">
                         <FaGift className="input-icon" />
                         <div className="input-wrapper">
                             <label htmlFor="modalBonus">
-                                Sign-On Bonus: {formatCurrency(modalInputs.bonus)}
+                                Sign-On Bonus: 
+                                {editingField === 'bonus' ? (
+                                    <input
+                                        type="number"
+                                        value={modalInputs.bonus}
+                                        onChange={(e) => setValidatedInput('bonus', e.target.value)}
+                                        onBlur={() => setEditingField(null)}
+                                        autoFocus
+                                        className="inline-edit-input"
+                                        min="0"
+                                        max="20000"
+                                    />
+                                ) : (
+                                    <span 
+                                        className="editable-value" 
+                                        onClick={() => handleValueClick('bonus')}
+                                    >
+                                        {formatCurrency(modalInputs.bonus)}
+                                    </span>
+                                )}
                             </label>
                             <div className="slider-input-group">
                                 <input
@@ -146,21 +177,6 @@ const OfferModal: React.FC<OfferModalProps> = ({
                                     value={modalInputs.bonus}
                                      onChange={(e) => setValidatedInput('bonus', e.target.value)}
                                 />
-                                <div className="direct-input-container">
-                                    <input
-                                        type="number"
-                                        value={modalInputs.bonus}
-                                        min="0"
-                                        max="20000"
-                                       onChange={(e) => setValidatedInput('bonus', e.target.value)}
-                                        className="direct-input"
-                                    />
-                                    <span className="currency-symbol">USD</span>
-                                </div>
-                            </div>
-                            <div className="range-labels">
-                                <span>{formatCurrency(0)}</span>
-                                <span>{formatCurrency(20000)}</span>
                             </div>
                             {/* Display Bonus Error */}
                             <div className="validation-messages">
@@ -169,12 +185,31 @@ const OfferModal: React.FC<OfferModalProps> = ({
                         </div>
                     </div>
 
-                    {/* --- Remote Days Input --- */}
+                    {/* --- Updated Remote Days Input --- */}
                     <div className="input-container">
                         <FaHome className="input-icon" />
                         <div className="input-wrapper">
                             <label htmlFor="modalRemoteDays">
-                                Remote Days: {modalInputs.remoteDays} days/week
+                                Remote Days: 
+                                {editingField === 'remoteDays' ? (
+                                    <input
+                                        type="number"
+                                        value={modalInputs.remoteDays}
+                                        onChange={(e) => setValidatedInput('remoteDays', e.target.value)}
+                                        onBlur={() => setEditingField(null)}
+                                        autoFocus
+                                        className="inline-edit-input"
+                                        min="0"
+                                        max="5"
+                                    />
+                                ) : (
+                                    <span 
+                                        className="editable-value" 
+                                        onClick={() => handleValueClick('remoteDays')}
+                                    >
+                                        {modalInputs.remoteDays}
+                                    </span>
+                                )} days/week
                             </label>
                             <div className="slider-input-group">
                                 <input
@@ -186,21 +221,6 @@ const OfferModal: React.FC<OfferModalProps> = ({
                                     value={modalInputs.remoteDays}
                                     onChange={(e) => setValidatedInput('remoteDays', e.target.value)}
                                 />
-                                <div className="direct-input-container">
-                                    <input
-                                        type="number"
-                                        value={modalInputs.remoteDays}
-                                        min="0"
-                                        max="5"
-                                       onChange={(e) => setValidatedInput('remoteDays', e.target.value)}
-                                        className="direct-input"
-                                    />
-                                    <span className="days-label">days</span>
-                                </div>
-                            </div>
-                            <div className="range-labels">
-                                <span>0</span>
-                                <span>5</span>
                             </div>
                             {/* Display Remote Days Error */}
                             <div className="validation-messages">
