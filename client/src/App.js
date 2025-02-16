@@ -1,16 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaBullseye, FaCheck, FaClock, FaMoneyCheckAlt, FaHandshake } from 'react-icons/fa';
+import { FaBullseye, FaCheck, FaMoneyCheckAlt, FaHandshake } from 'react-icons/fa';
 
-import { 
-    FaDollarSign, 
-    FaGift, 
-    FaHome, 
-    FaPaperPlane, 
-    FaTimes 
-  } from 'react-icons/fa';
-  
+// Component Imports
+import OfferModal from './components/OfferModal';
+import ObjectivesModal from './components/ObjectivesModal';
+import GameOverModal from './components/GameOverModal';
+import Timer from './components/Timer';
+
 
 function App() {
     const [messages, setMessages] = useState([]);
@@ -23,51 +21,63 @@ function App() {
     const [playerRole, setPlayerRole] = useState(null);
     const [isGameOverModalOpen, setIsGameOverModalOpen] = useState(false);
     const [gameOverMessage, setGameOverMessage] = useState(null);
-    const [lastOfferSender, setLastOfferSender] = useState(null);
 
-    // --- State for Current Offer ---
-    const [currentSalaryOffer, setCurrentSalaryOffer] = useState(null);
-    const [currentBonusOffer, setCurrentBonusOffer] = useState(null);
-    const [currentRemoteDaysOffer, setCurrentRemoteDaysOffer] = useState(null);
+    // --- Combined Offer State ---
+    const [offer, setOffer] = useState({
+        salary: null,
+        bonus: null,
+        remoteDays: null,
+        lastSender: null
+    });
 
-    // --- State for Offer Modal Input ---
-    const [modalSalary, setModalSalary] = useState(0);
-    const [modalBonus, setModalBonus] = useState(0);
-    const [modalRemoteDays, setModalRemoteDays] = useState(0);
-    // Add validation setters
-    const setValidatedSalary = (value) => {
-        const numValue = parseInt(value);
-        setModalSalary(Math.max(0, Math.min(numValue, 1000000)));
+    // --- Combined Modal Input State ---
+    const [modalInputs, setModalInputs] = useState({
+        salary: 0,
+        bonus: 0,
+        remoteDays: 0
+    });
+
+    // --- Combined Validation Setter ---
+    const setValidatedModalInput = (field, value) => {
+        let numValue = parseInt(value);
+        let maxVal;
+        switch (field) {
+            case 'salary':
+                maxVal = 1000000;
+                break;
+            case 'bonus':
+                maxVal = 20000;
+                break;
+            case 'remoteDays':
+                maxVal = 5;
+                break;
+            default:
+                return; // Should not happen
+        }
+        numValue = Math.max(0, Math.min(numValue, maxVal));
+        setModalInputs(prevInputs => ({
+            ...prevInputs,
+            [field]: numValue
+        }));
     };
-    
-    const setValidatedBonus = (value) => {
-        const numValue = parseInt(value);
-        setModalBonus(Math.max(0, Math.min(numValue, 20000)));
-    };
-    
-    const setValidatedRemoteDays = (value) => {
-        const numValue = parseInt(value);
-        setModalRemoteDays(Math.max(0, Math.min(numValue, 5)));
-    };
+
     // --- State for Timer ---
-    const [timeLeft, setTimeLeft] = useState(7 * 60); // Set your desired timer duration
-    const [isTimerRunning, setIsTimerRunning] = useState(false); // State to manage timer
+    const [timeLeft, setTimeLeft] = useState(7 * 60);
+    const [isTimerRunning, setIsTimerRunning] = useState(false);
 
     // --- Game Over State ---
     const [candidateScore, setCandidateScore] = useState(null);
     const [hrScore, setHrScore] = useState(null);
-    const [opponentBonusObjective, setOpponentBonusObjective] = useState(null); // e.g., "debt", "quick"
+    const [opponentBonusObjective, setOpponentBonusObjective] = useState(null);
 
     // --- State for Chat Disabled ---
     const [isChatDisabled, setIsChatDisabled] = useState(false);
 
     // --- State for Offer Button Disabled ---
-    const [isOfferDisabled, setIsOfferDisabled] = useState(true); // Initially disable the offer button
+    const [isOfferDisabled, setIsOfferDisabled] = useState(true);
 
     const [isLoading, setIsLoading] = useState(false);
-
     const [isPulsing, setIsPulsing] = useState(false);
-
 
     // --- Define Objectives (Hardcoded for MVP) ---
     const candidatePrimaryObjectives = [
@@ -96,32 +106,30 @@ function App() {
         },
       ];
 
-    // --- State for storing the selected bonus objective ---
+    // --- State for selected bonus objective ---
     const [bonusObjective, setBonusObjective] = useState(null);
 
-    const messageListRef = useRef(null); // Create a ref for the message list
+    const messageListRef = useRef(null);
 
     const [isTyping, setIsTyping] = useState(false);
     const [isPartnerTyping, setIsPartnerTyping] = useState(false);
     const typingTimeout = useRef();
-      
+
     const formatCurrency = (value) => {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: 0
-    }).format(value);
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            maximumFractionDigits: 0
+        }).format(value);
     };
-    // useEffect to scroll to the bottom whenever messages change
+
     useEffect(() => {
         if (messageListRef.current) {
-            messageListRef.current.scrollTop = messageListRef.current.scrollHeight; // Scroll to the bottom
+            messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
         }
-    }, [messages]); // Dependency on messages
+    }, [messages]);
 
-    // --- useEffect for WebSocket Connection ---
     useEffect(() => {
-        // Prevent multiple connections
         if (socketRef.current) {
             return;
         }
@@ -130,11 +138,12 @@ function App() {
         setIsLoading(true);
 
         socketRef.current.onopen = () => {
-            setIsLoading(false); // Set loading to false when connected
+            setIsLoading(false);
             console.log('WebSocket connected');
         };
 
         socketRef.current.onmessage = (event) => {
+            // ... (all message handling logic - NO CHANGES HERE) ...
             const parts = event.data.split("|");
             const messageType = parts[0];
 
@@ -145,36 +154,33 @@ function App() {
                 const roomId = parts[2];
                 myPlayerNumberRef.current = playerNumber;
                 setRoomId(roomId);
-                
+
             } else if (messageType === "role") {
                 const role = parts[1];
                 setPlayerRole(role);
-                console.log(`Player role set to: ${role}`); // Log role assignment
-
                 const bonusObjectives = role === "candidate" ? candidateBonusObjectives : hrBonusObjectives;
                 const randomIndex = Math.floor(Math.random() * bonusObjectives.length);
                 setBonusObjective(bonusObjectives[randomIndex]);
-
                 setMessages((prev) => [...prev, { player: myPlayerNumberRef.current, text: `You are ${role.charAt(0).toUpperCase() + role.slice(1)}`, sender: "system" }]);
 
             } else if (messageType === "waiting") {
                 const message = parts[1];
-                console.log(`Waiting message received: ${message}`); // Log waiting message
                 setMessages((prev) => [...prev, { player: "system", text: message, sender: "system" }]);
             } else if (messageType === "chat_disabled") {
-                console.log("Chat disabled message received."); // Log chat disabled message
-                setIsChatDisabled(true); // Disable chat input
-                setIsOfferDisabled(true); // Disable offer button
+                const message = parts[1]; //Get the message
+                setIsChatDisabled(true);
+                setIsOfferDisabled(true);
+                setMessages((prev) => [...prev, { player: "system", text: message, sender: "system" }]); // Add to message
             } else if (messageType === "player_connected") {
-                const message = "A second player has connected. You can start the negotiation now.";
-                console.log(message); // Log player connected message
+                const message = parts[1]; // Get the FULL message
                 setMessages((prev) => [...prev, { player: "system", text: message, sender: "system" }]);
-                setIsChatDisabled(false); // Enable chat input
-                setIsOfferDisabled(false); // Enable offer button
+                setIsChatDisabled(false);
+                setIsOfferDisabled(false);
             } else if (messageType === "start_timer") {
-                console.log("Timer start message received."); // Log timer start message
-                setIsTimerRunning(true); // Start the timer
-                setTimeLeft(7 * 60); // Reset timer duration if needed
+                const message = parts[1];
+                setIsTimerRunning(true);
+                setTimeLeft(7 * 60);
+                setMessages((prev) => [...prev, { player: "system", text: message, sender: "system" }]); //Add to message
             } else if (messageType === "ack") {
                 const [_, messageId, playerNumber, messageContent] = parts;
                 setMessages((prev) => [...prev, { player: playerNumber, text: messageContent, sender: "me" }]);
@@ -182,8 +188,7 @@ function App() {
                 const sender = parts[2];
                 const text = parts.slice(3).join("|");
 
-                setIsPartnerTyping(false); // Clear typing indicator when message received
-                console.log("Received chat message from:", sender, "text:", text);
+                setIsPartnerTyping(false);
                 setMessages((prev) => [
                     ...prev,
                     {
@@ -197,36 +202,29 @@ function App() {
                 const [_, messageId, playerNumber, messageContent] = parts;
                 console.log("Offer received:", { messageId, playerNumber, messageContent });
 
-                setLastOfferSender(() => playerNumber); // Use functional update
-                
-                // --- Parse Offer Details ---
+                setOffer(prevOffer => ({
+                    ...prevOffer,
+                    lastSender: playerNumber
+                }));
+
                 const offerParts = messageContent.split(",").map(part => part.split(":"));
                 const offerDetails = Object.fromEntries(offerParts);
-                
+
                 const salary = offerDetails.salary;
                 const bonus = offerDetails.bonus;
                 const remote_days = offerDetails.remote_days;
 
-                console.log("Parsed offer details:", { salary, bonus, remote_days });
-                
-                // Convert to numbers and update state
                 const parsedSalary = parseInt(salary, 10);
                 const parsedBonus = parseInt(bonus, 10);
                 const parsedRemoteDays = parseInt(remote_days, 10);
-                
-                console.log("Parsed offer values:", { parsedSalary, parsedBonus, parsedRemoteDays });
-                
-                if (!isNaN(parsedSalary)) {
-                    setCurrentSalaryOffer(parsedSalary);
-                }
-                if (!isNaN(parsedBonus)) {
-                    setCurrentBonusOffer(parsedBonus);
-                }
-                if (!isNaN(parsedRemoteDays)) {
-                    setCurrentRemoteDaysOffer(parsedRemoteDays);
-                }
-                
-                // Add a message to the chat
+
+                setOffer(prevOffer => ({
+                    ...prevOffer,
+                    salary: !isNaN(parsedSalary) ? parsedSalary : prevOffer.salary,
+                    bonus: !isNaN(parsedBonus) ? parsedBonus : prevOffer.bonus,
+                    remoteDays: !isNaN(parsedRemoteDays) ? parsedRemoteDays : prevOffer.remoteDays,
+                }));
+
                 setMessages((prev) => [
                     ...prev,
                     {
@@ -238,160 +236,137 @@ function App() {
                 ]);
             } else if (messageType === "gameover") {
                 const [_, messageId, outcome, candidateScore, hrScore, candidateBonus, hrBonus] = parts;
-                console.log("Game Over Message Parts:", {
-                    outcome,
-                    candidateScore,
-                    hrScore,
-                    candidateBonus,
-                    hrBonus,
-                    playerRole
-                });
-                
-                // Make sure we're using the correct playerRole
                 const currentRole = playerRole || (Number(myPlayerNumberRef.current) % 2 !== 0 ? "candidate" : "hr");
-                
+
                 setGameOverMessage(outcome);
                 setCandidateScore(candidateScore);
                 setHrScore(hrScore);
                 setOpponentBonusObjective(currentRole === "candidate" ? hrBonus : candidateBonus);
                 setIsGameOverModalOpen(true);
-                
-                // Only reset the modal input states
-                setModalSalary('');
-                setModalBonus('');
-                setModalRemoteDays('');
+
+                setModalInputs({
+                    salary: 0,
+                    bonus: 0,
+                    remoteDays: 0
+                });
+
             } else if (messageType === "typing") {
-                    const isTypingStatus = parts[1].toLowerCase(); 
-                    setIsPartnerTyping(isTypingStatus === 'true'); 
-                    return; 
+                const isTypingStatus = parts[1].toLowerCase() === 'true'; // Corrected part index
+                setIsPartnerTyping(isTypingStatus);  // Update the state directly
+                return; // Important: Return here to avoid further processing
             } else if (messageType === "error") {
                 const errorMessage = parts.slice(1).join("|");
-                alert(errorMessage);  // Or handle the error in a more user-friendly way
+                alert(errorMessage);
             }
         };
 
         socketRef.current.onclose = (event) => {
             console.log('WebSocket disconnected:', event.code, event.reason);
             socketRef.current = null;
+             //NEW: Add error handling on close
+             if (event.code !== 1000 && event.code !== 1001) {
+                setIsLoading(false);
+                alert('Connection lost. Please refresh the page.');
+            }
         };
-
+        //NEW: Add error handling
         socketRef.current.onerror = (error) => {
             console.error('WebSocket error:', error);
+            setIsLoading(false);
+            alert('Connection error. Please refresh the page.');
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // --- useEffect for Timer ---
     useEffect(() => {
-        let timerInterval;
+       let timerInterval;
         if (isTimerRunning && timeLeft > 0) {
             timerInterval = setInterval(() => {
                 setTimeLeft((prevTime) => prevTime - 1);
-            }, 1000); // Decrement every 1000ms (1 second)
+            }, 1000);
         } else if (timeLeft === 0) {
-            // When timer reaches 0, send "gameover" message
             if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-                socketRef.current.send("gameover|timeout|Game Over! Negotiation timed out."); // Use consistent format
+                socketRef.current.send("gameover|timeout|Game Over! Negotiation timed out.");
             }
         }
-
-        // Cleanup function: clear the interval when the component unmounts or timeLeft changes
         return () => clearInterval(timerInterval);
-    }, [isTimerRunning, timeLeft]); // Add isTimerRunning and timeLeft to dependencies
+    }, [isTimerRunning, timeLeft]);
 
-    // Add this effect to handle red phase pulsing
     useEffect(() => {
         if (timeLeft <= 60 && !isPulsing) {
-        setIsPulsing(true);
+            setIsPulsing(true);
         } else if (timeLeft > 60 && isPulsing) {
-        setIsPulsing(false);
+            setIsPulsing(false);
         }
     }, [timeLeft, isPulsing]);
-  
 
     const sendMessage = () => {
         if (messageInput.trim() && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(messageInput);
-            setMessageInput(''); // Clear input after sending
-            setIsTyping(false); // Reset typing status
-            socketRef.current.send("typing:false"); // Inform server typing stopped
-            clearTimeout(typingTimeout.current); // Clear any pending typing timeout
-        }
-    };
-
-    const handleAccept = () => {
-        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-            socketRef.current.send("accept");
-        }
-    };
-
-    const handleOffer = () => {
-        setIsOfferModalOpen(true);
-        // Initialize modal input fields with current offer values (or defaults)
-        setModalSalary(currentSalaryOffer !== null ? currentSalaryOffer : '');
-        setModalBonus(currentBonusOffer !== null ? currentBonusOffer : '');
-        setModalRemoteDays(currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : '');
-
-    };
-
-    const handleInputChange = (e) => {
-        setMessageInput(e.target.value);
-        
-        // Only send typing status if we weren't already typing
-        if (!isTyping && e.target.value.trim()) {
-            socketRef.current.send("typing:true");
-            setIsTyping(true);
-        }
-        
-        // Clear previous timeout
-        clearTimeout(typingTimeout.current);
-        
-        // Set new timeout
-        typingTimeout.current = setTimeout(() => {
-            if (isTyping) {
-                setIsTyping(false);
-                socketRef.current.send("typing:false");
-            }
-        }, 1000);
-        
-        // If input is empty, stop typing immediately
-        if (!e.target.value.trim() && isTyping) {
+            setMessageInput('');
             setIsTyping(false);
             socketRef.current.send("typing:false");
             clearTimeout(typingTimeout.current);
         }
     };
 
+    const handleAccept = () => {
+       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            socketRef.current.send("accept");
+        }
+    };
+
+    const handleOffer = () => {
+        setIsOfferModalOpen(true);
+        setModalInputs({
+            salary: offer.salary !== null ? offer.salary : 0,
+            bonus: offer.bonus !== null ? offer.bonus : 0,
+            remoteDays: offer.remoteDays !== null ? offer.remoteDays : 0,
+        });
+    };
+
+    const handleInputChange = (e) => {
+        setMessageInput(e.target.value);
+    
+        // Only send typing status if there's actual input.
+        if (e.target.value.trim()) {
+             if (!isTyping) {
+                socketRef.current.send("typing:true");
+                setIsTyping(true);
+            }
+    
+            clearTimeout(typingTimeout.current);
+            typingTimeout.current = setTimeout(() => {
+                setIsTyping(false);
+                socketRef.current.send("typing:false");
+            }, 1000);
+        } else { // Input is empty, stop typing immediately.
+                setIsTyping(false);
+                socketRef.current.send("typing:false");
+                clearTimeout(typingTimeout.current);
+        }
+    };
+
     const handleObjectives = () => {
         setIsObjectivesModalOpen(true);
     };
-    
 
     const handleSubmitOffer = () => {
         console.log("Submit offer clicked");
-        console.log("Current values:", { modalSalary, modalBonus, modalRemoteDays });
+        console.log("Current values:", modalInputs);
+        const salary = modalInputs.salary;
+        const bonus = modalInputs.bonus;
+        const remote_days = modalInputs.remoteDays;
 
-        // Input validation
-        const salary = parseInt(modalSalary);
-        const bonus = parseInt(modalBonus);
-        const remote_days = parseInt(modalRemoteDays);
-
-        console.log("Parsed values:", { salary, bonus, remote_days });
-
-        // Validate salary
         if (isNaN(salary) || salary < 0 || salary > 1000000 || !Number.isInteger(salary)) {
             console.log("Salary validation failed");
             alert("Base salary must be a whole number between $0 and $1,000,000");
             return;
         }
-
-        // Validate bonus
         if (isNaN(bonus) || bonus < 0 || bonus > 10000 || !Number.isInteger(bonus)) {
             console.log("Bonus validation failed");
             alert("Sign-on bonus must be a whole number between $0 and $10,000");
             return;
         }
-
-        // Validate remote days
         if (isNaN(remote_days) || remote_days < 0 || remote_days > 5 || !Number.isInteger(remote_days)) {
             console.log("Remote days validation failed");
             alert("Remote work days must be a whole number between 0 and 5");
@@ -411,11 +386,12 @@ function App() {
             socketRef.current.send(offerMessage);
             console.log("Offer message sent");
 
-            // Update local state when sending offer
-            setCurrentSalaryOffer(salary);
-            setCurrentBonusOffer(bonus);
-            setCurrentRemoteDaysOffer(remote_days);
-            setLastOfferSender(myPlayerNumberRef.current);
+            setOffer({
+                salary: salary,
+                bonus: bonus,
+                remoteDays: remote_days,
+                lastSender: myPlayerNumberRef.current
+            });
         } else {
             console.log("WebSocket not ready");
         }
@@ -426,72 +402,63 @@ function App() {
 
     const handleCancelOffer = () => {
         setIsOfferModalOpen(false);
-        // No need to reset individual offer states here; they're managed by the modal
     };
 
     const handleCloseObjectives = () => {
-        setIsObjectivesModalOpen(false);
-    }
-    const handleCloseGameOver = () => {
-        setIsGameOverModalOpen(false);
-        resetGameState(); // Reset all states when modal is closed
+       setIsObjectivesModalOpen(false);
     };
 
-    // --- Helper function to format time ---
+    const handleCloseGameOver = () => {
+        setIsGameOverModalOpen(false);
+        resetGameState();
+    };
+
     const formatTime = (seconds) => {
         const minutes = Math.floor(seconds / 60);
         const remainingSeconds = seconds % 60;
         return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
     };
 
-    // Add these helper functions at the top level of the App component
     const getBonusObjectiveDescription = (objectiveId, role) => {
-        console.log("Getting bonus objective description:", { objectiveId, role });
-        
         if (!objectiveId) {
-            console.log("No objectiveId provided");
             return "N/A";
         }
-        
-        // Determine role if not provided
+
         const currentRole = role || (Number(myPlayerNumberRef.current) % 2 !== 0 ? "candidate" : "hr");
-        
+
         if (currentRole === "candidate") {
             const hrObjective = hrBonusObjectives.find(obj => obj.id === objectiveId);
-            console.log("Found HR objective:", hrObjective);
             return hrObjective ? hrObjective.description : "N/A";
         } else if (currentRole === "hr") {
             const candidateObjective = candidateBonusObjectives.find(obj => obj.id === objectiveId);
-            console.log("Found candidate objective:", candidateObjective);
             return candidateObjective ? candidateObjective.description : "N/A";
         }
         return "N/A";
     };
 
-    // Add this new function to reset game-related states
     const resetGameState = () => {
-        // Reset current offer states
-        setCurrentSalaryOffer(null);
-        setCurrentBonusOffer(null);
-        setCurrentRemoteDaysOffer(null);
-        
-        // Reset offer modal states
-        setModalSalary('');
-        setModalBonus('');
-        setModalRemoteDays('');
-        
-        // Reset game over states
+        setOffer({
+            salary: null,
+            bonus: null,
+            remoteDays: null,
+            lastSender: null
+        });
+
+        setModalInputs({
+            salary: 0,
+            bonus: 0,
+            remoteDays: 0
+        });
+
         setGameOverMessage(null);
         setCandidateScore(null);
         setHrScore(null);
         setOpponentBonusObjective(null);
-        
-        // Reset modals
+
         setIsOfferModalOpen(false);
         setIsObjectivesModalOpen(false);
         setIsGameOverModalOpen(false);
-        
-        // Reset messages
+
         setMessages([]);
     };
 
@@ -501,49 +468,19 @@ function App() {
                 <div className="status-badge">
                     <span className="room-id">Room #{roomId}</span>
                 </div>
-                <div className="timer">
-                    <div className={`timer-progress ${isPulsing ? 'pulse' : ''}`}>
-                        <svg width="48" height="48">
-                        <circle
-                            cx="24"
-                            cy="24"
-                            r="20"
-                            className="timer-base"
-                            strokeWidth="4"
-                        />
-                        <circle
-                            cx="24"
-                            cy="24"
-                            r="20"
-                            className={`timer-fill ${
-                            timeLeft > 240 ? 'green' : 
-                            timeLeft > 60 ? 'orange' : 
-                            'red'
-                            }`}
-                            strokeWidth="4"
-                            strokeDasharray={`${(timeLeft / 420) * 126} 126`}
-                            transform="rotate(-90 24 24)"
-                        />
-                        </svg>
-                    </div>
-                    <span className="timer-text">{formatTime(timeLeft)}</span>
-                </div>
-
-
+                <Timer timeLeft={timeLeft} isPulsing={isPulsing} formatTime={formatTime} />
             </div>
 
-            {/* --- Current Offer Display --- */}
             <div className="current-offer">
                 <h2><strong>Current Offer:</strong></h2>
-                <p>Base Salary: ${currentSalaryOffer !== null ? currentSalaryOffer.toLocaleString() : "N/A"}</p>
-                <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
-                <p>Remote Work Days Per Week: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
+                <p>Base Salary: ${offer.salary !== null ? offer.salary.toLocaleString() : "N/A"}</p>
+                <p>Sign-On Bonus: ${offer.bonus !== null ? offer.bonus.toLocaleString() : "N/A"}</p>
+                <p>Remote Work Days Per Week: {offer.remoteDays !== null ? offer.remoteDays : "N/A"}</p>
             </div>
-            
+
             <div className="message-list" ref={messageListRef}>
                 {messages.map((msg, index) => (
                     <div key={index} className={`message ${msg.sender === 'me' ? 'my-message' : msg.sender === 'system' ? 'system-message' : 'other-message'}`}>
-                        
                         <span className="message-text">{msg.text}</span>
                     </div>
                 ))}
@@ -570,9 +507,9 @@ function App() {
                         disabled={isChatDisabled}
                         placeholder="Type your message..."
                     />
-                    <button 
-                        onClick={sendMessage} 
-                        className="send-button" 
+                    <button
+                        onClick={sendMessage}
+                        className="send-button"
                         disabled={isChatDisabled}
                     >
                         <svg width="24" height="24" viewBox="0 0 24 24">
@@ -581,18 +518,18 @@ function App() {
                     </button>
                 </div>
                 <div className="action-buttons">
-                    <button 
-                        onClick={handleAccept} 
+                    <button
+                        onClick={handleAccept}
                         className="action-button accept"
-                        disabled={!currentSalaryOffer || !lastOfferSender || lastOfferSender === myPlayerNumberRef.current}
+                        disabled={!offer.salary || !offer.lastSender || offer.lastSender === myPlayerNumberRef.current}
                     >
                         <svg width="24" height="24" viewBox="0 0 24 24">
                         <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                         </svg>
                         Accept
                     </button>
-                    <button 
-                        onClick={handleOffer} 
+                    <button
+                        onClick={handleOffer}
                         className="action-button offer"
                         disabled={isOfferDisabled}
                     >
@@ -601,8 +538,8 @@ function App() {
                         </svg>
                         Offer
                     </button>
-                    <button 
-                        onClick={handleObjectives} 
+                    <button
+                        onClick={handleObjectives}
                         className="action-button objectives"
                     >
                         <svg width="24" height="24" viewBox="0 0 24 24">
@@ -612,256 +549,37 @@ function App() {
                     </button>
                 </div>
             </div>
-            <AnimatePresence>
-            {isOfferModalOpen && (
-                <motion.div
-                    className="modal-overlay"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                >
-                    <motion.div 
-                    className="modal offer-modal-content"
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 50, opacity: 0 }}
-                    >
-                    <div className="offer-header">
-                        <FaHandshake className="offer-icon" />
-                        <h2>Make an Offer</h2>
-                    </div>
 
-                    <div className="offer-input-group">
-                        <div className="input-container">
-                        <FaDollarSign className="input-icon" />
+            <OfferModal
+                isOpen={isOfferModalOpen}
+                onClose={handleCancelOffer}
+                onSubmit={handleSubmitOffer}
+                modalInputs={modalInputs}
+                setValidatedModalInput={setValidatedModalInput}
+                formatCurrency={formatCurrency}
+            />
 
-                        <div className="input-wrapper">
-                            <label htmlFor="modalSalary">
-                                Base Salary: {formatCurrency(modalSalary)}
-                            </label>
-                            <div className="slider-input-group">
-                                <input
-                                    type="range"
-                                    id="modalSalary"
-                                    min="50000"
-                                    max="100000"
-                                    step="1000"
-                                    value={modalSalary}
-                                    onChange={(e) => setValidatedSalary(e.target.value)}
-                                />
-                                <div className="direct-input-container">
-                                    <input
-                                    type="number"
-                                    value={modalSalary}
-                                    min="50000"
-                                    max="100000"
-                                    onChange={(e) => setValidatedSalary(e.target.value)}
-                                    className="direct-input"
-                                    />
-                                    <span className="currency-symbol">USD</span>
-                                </div>
-                            </div>
-                            <div className="range-labels">
-                            <span>{formatCurrency(50000)}</span>
-                            <span>{formatCurrency(100000)}</span>
-                            </div>
-                        </div>
-                        </div>
+            <ObjectivesModal
+                isOpen={isObjectivesModalOpen}
+                onClose={handleCloseObjectives}
+                playerRole={playerRole}
+                candidatePrimaryObjectives={candidatePrimaryObjectives}
+                hrPrimaryObjectives={hrPrimaryObjectives}
+                bonusObjective={bonusObjective}
+            />
 
-                        <div className="input-container">
-                        <FaGift className="input-icon" />
-                        <div className="input-wrapper">
-                        <label htmlFor="modalBonus">
-                            Sign-On Bonus: {formatCurrency(modalBonus)}
-                            </label>
-                            <div className="slider-input-group">
-                            <input
-                                type="range"
-                                id="modalBonus"
-                                min="0"
-                                max="20000"
-                                step="500"
-                                value={modalBonus}
-                                onChange={(e) => setValidatedBonus(e.target.value)}
-                            />
-                            <div className="direct-input-container">
-                                <input
-                                type="number"
-                                value={modalBonus}
-                                min="0"
-                                max="20000"
-                                onChange={(e) => setValidatedBonus(e.target.value)}
-                                className="direct-input"
-                                />
-                                <span className="currency-symbol">USD</span>
-                            </div>
-                            </div>
-                            <div className="range-labels">
-                            <span>{formatCurrency(0)}</span>
-                            <span>{formatCurrency(20000)}</span>
-                            </div>
-                        </div>
-                        </div>
+            <GameOverModal
+                isOpen={isGameOverModalOpen}
+                onClose={handleCloseGameOver}
+                gameOverMessage={gameOverMessage}
+                candidateScore={candidateScore}
+                hrScore={hrScore}
+                offer={offer}
+                getBonusObjectiveDescription={getBonusObjectiveDescription}
+                opponentBonusObjective={opponentBonusObjective}
+                playerRole={playerRole}
+            />
 
-                        <div className="input-container">
-                        <FaHome className="input-icon" />
-                        <div className="input-wrapper">
-                        <label htmlFor="modalRemoteDays">
-                            Remote Days: {modalRemoteDays} days/week
-                            </label>
-                            <div className="slider-input-group">
-                            <input
-                                type="range"
-                                id="modalRemoteDays"
-                                min="0"
-                                max="5"
-                                step="1"
-                                value={modalRemoteDays}
-                                onChange={(e) => setValidatedRemoteDays(e.target.value)}
-                            />
-                            <div className="direct-input-container">
-                                <input
-                                type="number"
-                                value={modalRemoteDays}
-                                min="0"
-                                max="5"
-                                onChange={(e) => setValidatedRemoteDays(e.target.value)}
-                                className="direct-input"
-                                />
-                                <span className="days-label">days</span>
-                            </div>
-                            </div>
-                            <div className="range-labels">
-                            <span>0</span>
-                            <span>5</span>
-                            </div>
-                        </div>
-                        </div>
-                    </div>
-
-                    <div className="modal-actions">
-                        <button 
-                        onClick={handleSubmitOffer} 
-                        className="modal-button primary-btn"
-                        >
-                        <FaPaperPlane className="btn-icon" />
-                        Submit Offer
-                        </button>
-                        <button 
-                        onClick={handleCancelOffer} 
-                        className="modal-button secondary-btn"
-                        >
-                        <FaTimes className="btn-icon" />
-                        Cancel
-                        </button>
-                    </div>
-                    </motion.div>
-                </motion.div>
-            )}
-
-            </AnimatePresence>
-            <AnimatePresence>
-            {isObjectivesModalOpen && (
-                <motion.div
-                    className="modal-overlay"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    style={{position: 'fixed', top: '0', left:'0', width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
-                >
-                    <motion.div
-                    className="modal objectives-content"
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 50, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    style={{backgroundColor: 'white', padding: '20px', borderRadius: '5px'}}
-                    >
-                    <div className="objectives-header">
-                        <FaBullseye className="objectives-icon" size={32} color="#2b6cb0" />
-                        <h2 className="objectives-title">{playerRole === "candidate" ? "Candidate Objectives" : "HR Objectives"}</h2>
-                    </div>
-
-                    <div className="objectives-section">
-                        <h3 className="section-title">
-                        <FaCheck className="section-icon" /> Primary Goals
-                        </h3>
-                        <ul className="key-points">
-                        {(playerRole === "candidate" ? candidatePrimaryObjectives : hrPrimaryObjectives).map((objective, index) => (
-                            <li className="key-point" key={index}>
-                            <FaCheck className="key-point-icon" />
-                            <span>{objective}</span>
-                            </li>
-                        ))}
-                        </ul>
-                    </div>
-
-                    <div className="objectives-section">
-                        <h3 className="section-title">
-                        <FaMoneyCheckAlt className="section-icon" /> Bonus Objective
-                        </h3>
-                        <div className="bonus-card">
-                        <FaHandshake className="bonus-icon" />
-                        <div>
-                            <p className="bonus-description">{bonusObjective.description}</p>
-                            <p className="bonus-points">{bonusObjective.bonus}</p>
-                        </div>
-                        </div>
-                    </div>
-
-                    <div className="modal-buttons">
-                        <button onClick={handleCloseObjectives} className="modal-button modal-cancel">Close</button>
-                    </div>
-                    </motion.div>
-                </motion.div>
-            )}
-
-            </AnimatePresence>
-            {/* --- Game Over Modal --- */}
-            <AnimatePresence>
-                {isGameOverModalOpen && (
-                    <motion.div
-                    className="modal-overlay"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    style={{position: 'fixed', top: '0', left:'0', width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center'}}
-                >
-                    <motion.div
-                    className="modal"
-                    initial={{ y: 50, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 50, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    style={{backgroundColor: 'white', padding: '20px', borderRadius: '5px'}}
-                    >
-                            <h2>Game Over</h2>
-                            <p>{gameOverMessage}</p>
-                            {/* Display Scores */}
-                            <p>Candidate Score: {candidateScore !== null ? candidateScore : "N/A"}</p>
-                            <p>HR Score: {hrScore !== null ? hrScore : "N/A"}</p>
-
-                            {/* Display Opponent's Bonus Objective (if game ended successfully)*/}
-                            {gameOverMessage && !gameOverMessage.includes("timed out") && (
-                                <>
-                                    <h3>Final Terms:</h3>
-                                    <p>Base Salary: ${currentSalaryOffer !== null ? currentSalaryOffer.toLocaleString() : "N/A"}</p>
-                                    <p>Sign-On Bonus: ${currentBonusOffer !== null ? currentBonusOffer.toLocaleString() : "N/A"}</p>
-                                    <p>Remote Work Days: {currentRemoteDaysOffer !== null ? currentRemoteDaysOffer : "N/A"}</p>
-                                    <h3>Opponent's Bonus Objective:</h3>
-                                    <p>{getBonusObjectiveDescription(opponentBonusObjective, playerRole)}</p>
-                                </>
-                            )}
-                            <div className="modal-buttons">
-                                <button onClick={handleCloseGameOver} className="modal-button modal-cancel">Close</button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
             {isLoading && (
                 <div className="loading-overlay">
                     <div className="loading-spinner"></div>
