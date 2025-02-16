@@ -2,6 +2,11 @@ import re
 from datetime import datetime
 from collections import defaultdict
 import spacy
+import logging
+
+# Initialize logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)  # Set logging level
 
 # Load spaCy model for English
 nlp = spacy.load("en_core_web_sm")
@@ -226,71 +231,81 @@ def group_messages_by_minute(chat_log, player_id):
     """
     Group messages from a specific player by minute using ISO‑8601 timestamps.
     Duplicate messages (after normalization) within the same minute are ignored.
-    
-    Returns:
-      dict: Keys are minute strings (e.g., "2023-01-01T10:00") and values are lists of messages.
     """
     groups = defaultdict(list)
     seen_in_minute = defaultdict(set)
+    
     for message in chat_log:
-        if str(message.get("sender")) != str(player_id):
-            continue
-        text = message.get("text", "").strip()
-        if len(re.split(r'\s+', text)) < MIN_WORDS:
-            continue
-        ts = message.get("timestamp")
-        if ts:
-            try:
-                dt = datetime.fromisoformat(ts)
-                minute_str = dt.strftime("%Y-%m-%dT%H:%M")
-            except Exception:
+        try:
+            if str(message.get("sender")) != str(player_id):
+                continue
+                
+            text = message.get("text", "").strip()
+            if not text or len(re.split(r'\s+', text)) < MIN_WORDS:
+                continue
+                
+            ts = message.get("timestamp")
+            if not ts:
+                logger.warning(f"Message without timestamp: {message}")
                 minute_str = "unknown"
-        else:
-            minute_str = "unknown"
-        normalized_text = normalize_message(text)
-        if normalized_text in seen_in_minute[minute_str]:
+            else:
+                try:
+                    dt = datetime.fromisoformat(ts)
+                    minute_str = dt.strftime("%Y-%m-%dT%H:%M")
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Invalid timestamp format: {ts}")
+                    minute_str = "unknown"
+                    
+            normalized_text = normalize_message(text)
+            if normalized_text in seen_in_minute[minute_str]:
+                continue
+                
+            seen_in_minute[minute_str].add(normalized_text)
+            groups[minute_str].append(message)
+            
+        except Exception as e:
+            logger.error(f"Error processing message: {message}, Error: {e}")
             continue
-        seen_in_minute[minute_str].add(normalized_text)
-        groups[minute_str].append(message)
+            
     return groups
 
 def evaluate_chat(chat_log, player_id):
     """
     Evaluate the full chat log for a given player and compute a bonus score.
-    
-    Steps:
-      1. Group messages by minute (using timestamps).
-      2. For each minute, compute the bonus score for each message (using evaluate_message).
-         Only the highest-scoring message in each minute is counted (to rate-limit bonus accumulation).
-      3. Sum these per-minute scores.
-      4. Adjust the overall bonus by the average word count across messages (if below a threshold, scale down).
-    
-    Returns:
-      int: The final bonus score.
     """
-    groups = group_messages_by_minute(chat_log, player_id)
-    total_bonus = 0.0
-    total_words = 0
-    total_messages = 0
+    try:
+        groups = group_messages_by_minute(chat_log, player_id)
+        total_bonus = 0.0
+        total_words = 0
+        total_messages = 0
 
-    for minute, messages in groups.items():
-        max_score = 0.0
-        for msg in messages:
-            score = evaluate_message(msg.get("text", ""))
-            max_score = max(max_score, score)
-            word_count = len(re.split(r'\s+', msg.get("text", "").strip()))
-            total_words += word_count
-            total_messages += 1
-        total_bonus += min(max_score, MAX_BONUS_PER_MINUTE)
-    
-    if total_messages > 0:
-        avg_word_count = total_words / total_messages
-        quality_multiplier = avg_word_count / MIN_AVERAGE_WORD_COUNT if avg_word_count < MIN_AVERAGE_WORD_COUNT else 1.0
-    else:
-        quality_multiplier = 0.0
+        for minute, messages in groups.items():
+            try:
+                max_score = 0.0
+                for msg in messages:
+                    text = msg.get("text", "").strip()
+                    score = evaluate_message(text)
+                    max_score = max(max_score, score)
+                    word_count = len(re.split(r'\s+', text))
+                    total_words += word_count
+                    total_messages += 1
+                total_bonus += min(max_score, MAX_BONUS_PER_MINUTE)
+            except Exception as e:
+                logger.error(f"Error processing minute {minute}: {e}")
+                continue
 
-    total_bonus *= quality_multiplier
-    return int(round(total_bonus))
+        if total_messages > 0:
+            avg_word_count = total_words / total_messages
+            quality_multiplier = min(1.0, avg_word_count / MIN_AVERAGE_WORD_COUNT)
+        else:
+            quality_multiplier = 0.0
+
+        total_bonus *= quality_multiplier
+        return int(round(total_bonus))
+        
+    except Exception as e:
+        logger.error(f"Error evaluating chat: {e}")
+        return 0
 
 # --- Example usage ---
 if __name__ == "__main__":
