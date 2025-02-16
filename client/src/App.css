@@ -860,3 +860,23 @@ input[type="range"]:focus::-webkit-slider-thumb {
   color: #718096;
   pointer-events: none;
 }
+
+.editable-value {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.editable-value:hover {
+  background-color: #f0f0f0;
+}
+
+.inline-edit-input {
+  width: 100px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin-left: 4px;
+}
