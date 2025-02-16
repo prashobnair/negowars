@@ -108,6 +108,30 @@ def calculate_dynamic_hr_score(salary, bonus, remote_days, total_compensation, b
         score += bonus_obj["bonus"]
     return score
 
+# --- Room Cleanup Task (added before the websocket endpoint) ---
+async def cleanup_inactive_rooms():
+    while True:
+        await asyncio.sleep(300)  # Check every 5 minutes (300 seconds)
+        logger.info("Running room cleanup task...")
+        try:
+            # Create a copy of the keys to avoid modifying the dictionary while iterating
+            room_ids = list(rooms.keys())
+            for room_id in room_ids:
+                room = rooms.get(room_id) # Use .get()
+                # Check if the room exists and has no active players
+                if room and not any(client.is_active for client in room.players):
+                    # Additional check, in case player has reconnected.
+                    if not room.players:
+                        logger.info(f"Cleaning up empty room {room_id}")
+                        del rooms[room_id]
+        except Exception as e:
+            logger.error(f"Error during room cleanup: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(cleanup_inactive_rooms())
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     global next_room_id
@@ -224,7 +248,7 @@ async def websocket_endpoint(websocket: WebSocket):
                                 await client.websocket.send_text(f"typing|{is_typing_str}")  # Corrected format
                             except Exception as e:
                                 logger.error(f"Error sending typing status: {e}")
-                                client.is_active = False
+                                client.is_active = False # type: ignore
 
                 # Handle accept message
                 elif data == "accept":
@@ -316,8 +340,16 @@ async def websocket_endpoint(websocket: WebSocket):
                 current_client.is_active = False
                 if current_client in room.players:
                     room.players.remove(current_client)
-                if room_id in rooms and not room.players:
+
+            # Check if the room is now empty *and* the game hasn't finished.
+            # Schedule cleanup only if all clients are inactive
+            if room and not any(client.is_active for client in room.players):
+                logger.info(f"Scheduling room {room_id} for cleanup")
+                await asyncio.sleep(60)  # Wait 60 seconds before final cleanup
+                # Final check before deletion, in case of reconnections:
+                if room_id in rooms and not rooms[room_id].players:
                     logger.info(f"Removing empty room {room_id}")
                     del rooms[room_id]
+                    
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")

@@ -1,5 +1,5 @@
-// src/components/OfferModal.js
-import React from 'react';
+// src/components/OfferModal.tsx
+import React, { useState } from 'react'; // Import useState
 import { motion } from 'framer-motion';
 import {
     FaDollarSign,
@@ -9,15 +9,63 @@ import {
     FaTimes,
     FaHandshake
 } from 'react-icons/fa';
+import { ModalInputs } from '../types';
 
-function OfferModal({
+type OfferModalProps = {
+    isOpen: boolean;
+    onClose: () => void;
+    onSubmit: () => void;
+    modalInputs: ModalInputs;
+    setValidatedModalInput: (field: keyof ModalInputs, value: string) => void;
+    formatCurrency: (value: number) => string;
+};
+
+const OfferModal: React.FC<OfferModalProps> = ({
     isOpen,
     onClose,
     onSubmit,
-    modalInputs, // Use the combined modalInputs object
-    setValidatedModalInput, // Use the combined setter
+    modalInputs,
+    setValidatedModalInput,
     formatCurrency
-}) {
+}) => {
+
+    // Validation Error State
+    const [errors, setErrors] = useState({
+        salary: '',
+        bonus: '',
+        remoteDays: ''
+    });
+
+     // Updated Validation Setter
+    const setValidatedInput = (field: keyof ModalInputs, value: string) => {
+      let numValue = parseInt(value);
+      let error = '';
+
+      if (isNaN(numValue) || !Number.isInteger(parseFloat(value))) {
+          error = 'Must be a whole number';
+      } else {
+          switch (field) {
+              case 'salary':
+                  if (numValue < 0 || numValue > 1000000) {
+                      error = 'Salary must be between $0 and $1,000,000';
+                  }
+                  break;
+              case 'bonus':
+                  if (numValue < 0 || numValue > 20000) {
+                      error = 'Bonus must be between $0 and $20,000';
+                  }
+                  break;
+              case 'remoteDays':
+                  if (numValue < 0 || numValue > 5) {
+                      error = 'Remote days must be between 0 and 5';
+                  }
+                  break;
+          }
+      }
+        setErrors(prevErrors => ({ ...prevErrors, [field]: error })); // Update the specific error
+        setValidatedModalInput(field, value); //Still update, but with validated value
+
+    };
 
     if (!isOpen) return null;
 
@@ -56,7 +104,7 @@ function OfferModal({
                                     max="1000000"
                                     step="1000"
                                     value={modalInputs.salary}
-                                    onChange={(e) => setValidatedModalInput('salary', e.target.value)}
+                                    onChange={(e) => setValidatedInput('salary', e.target.value)}
                                 />
                                 <div className="direct-input-container">
                                     <input
@@ -64,7 +112,7 @@ function OfferModal({
                                         value={modalInputs.salary}
                                         min="50000"
                                         max="1000000"
-                                        onChange={(e) => setValidatedModalInput('salary', e.target.value)}
+                                        onChange={(e) => setValidatedInput('salary', e.target.value)}
                                         className="direct-input"
                                     />
                                     <span className="currency-symbol">USD</span>
@@ -73,6 +121,10 @@ function OfferModal({
                             <div className="range-labels">
                                 <span>{formatCurrency(50000)}</span>
                                 <span>{formatCurrency(1000000)}</span>
+                            </div>
+                             {/* Display Salary Error */}
+                            <div className="validation-messages">
+                                {errors.salary && <span className="error" style={{color: "red"}}>{errors.salary}</span>}
                             </div>
                         </div>
                     </div>
@@ -92,7 +144,7 @@ function OfferModal({
                                     max="20000"
                                     step="500"
                                     value={modalInputs.bonus}
-                                    onChange={(e) => setValidatedModalInput('bonus', e.target.value)}
+                                     onChange={(e) => setValidatedInput('bonus', e.target.value)}
                                 />
                                 <div className="direct-input-container">
                                     <input
@@ -100,7 +152,7 @@ function OfferModal({
                                         value={modalInputs.bonus}
                                         min="0"
                                         max="20000"
-                                        onChange={(e) => setValidatedModalInput('bonus', e.target.value)}
+                                       onChange={(e) => setValidatedInput('bonus', e.target.value)}
                                         className="direct-input"
                                     />
                                     <span className="currency-symbol">USD</span>
@@ -109,6 +161,10 @@ function OfferModal({
                             <div className="range-labels">
                                 <span>{formatCurrency(0)}</span>
                                 <span>{formatCurrency(20000)}</span>
+                            </div>
+                            {/* Display Bonus Error */}
+                            <div className="validation-messages">
+                                {errors.bonus && <span className="error" style={{color: "red"}}>{errors.bonus}</span>}
                             </div>
                         </div>
                     </div>
@@ -128,7 +184,7 @@ function OfferModal({
                                     max="5"
                                     step="1"
                                     value={modalInputs.remoteDays}
-                                    onChange={(e) => setValidatedModalInput('remoteDays', e.target.value)}
+                                    onChange={(e) => setValidatedInput('remoteDays', e.target.value)}
                                 />
                                 <div className="direct-input-container">
                                     <input
@@ -136,7 +192,7 @@ function OfferModal({
                                         value={modalInputs.remoteDays}
                                         min="0"
                                         max="5"
-                                        onChange={(e) => setValidatedModalInput('remoteDays', e.target.value)}
+                                       onChange={(e) => setValidatedInput('remoteDays', e.target.value)}
                                         className="direct-input"
                                     />
                                     <span className="days-label">days</span>
@@ -145,6 +201,10 @@ function OfferModal({
                             <div className="range-labels">
                                 <span>0</span>
                                 <span>5</span>
+                            </div>
+                            {/* Display Remote Days Error */}
+                            <div className="validation-messages">
+                               {errors.remoteDays && <span className="error" style={{color: "red"}}>{errors.remoteDays}</span>}
                             </div>
                         </div>
                     </div>
@@ -163,6 +223,6 @@ function OfferModal({
             </motion.div>
         </motion.div>
     );
-}
+};
 
 export default OfferModal;

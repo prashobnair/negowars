@@ -602,7 +602,6 @@ button:disabled {
 
 .offer-header {
   display: flex;
-  align-items: center;
   gap: 1rem;
   margin-bottom: 2rem;
 }

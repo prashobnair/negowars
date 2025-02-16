@@ -1,8 +1,21 @@
 // src/components/GameOverModal.js
 import React from 'react';
 import { motion } from 'framer-motion';
+import { GameRole, Offer } from '../types'; // Import types
 
-function GameOverModal({ isOpen, onClose, gameOverMessage, candidateScore, hrScore, offer, getBonusObjectiveDescription, opponentBonusObjective, playerRole }) { // Receive 'offer'
+type GameOverModalProps = {
+    isOpen: boolean;
+    onClose: () => void;
+    gameOverMessage: string | null;
+    candidateScore: number | null;
+    hrScore: number | null;
+    offer: Offer;
+    getBonusObjectiveDescription: (objectiveId: string | null, role?: GameRole) => string;
+    opponentBonusObjective: string | null;
+    playerRole: GameRole | null;
+};
+
+const GameOverModal: React.FC<GameOverModalProps> = ({ isOpen, onClose, gameOverMessage, candidateScore, hrScore, offer, getBonusObjectiveDescription, opponentBonusObjective, playerRole }) => {
     if (!isOpen) return null;
 
     return (
@@ -37,7 +50,7 @@ function GameOverModal({ isOpen, onClose, gameOverMessage, candidateScore, hrSco
                         <p>Sign-On Bonus: ${offer.bonus !== null ? offer.bonus.toLocaleString() : "N/A"}</p>
                         <p>Remote Work Days: {offer.remoteDays !== null ? offer.remoteDays : "N/A"}</p>
                         <h3>Opponent's Bonus Objective:</h3>
-                        <p>{getBonusObjectiveDescription(opponentBonusObjective, playerRole)}</p>
+                        <p>{getBonusObjectiveDescription(opponentBonusObjective, playerRole as GameRole)}</p>
                     </>
                 )}
                 <div className="modal-buttons">

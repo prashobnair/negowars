@@ -1,9 +1,20 @@
-// src/components/ObjectivesModal.js
+// src/components/ObjectivesModal.tsx
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FaBullseye, FaCheck, FaMoneyCheckAlt, FaHandshake } from 'react-icons/fa';
+import { GameRole, BonusObjective } from '../types'; // Import types
 
-function ObjectivesModal({ isOpen, onClose, playerRole, candidatePrimaryObjectives, hrPrimaryObjectives, bonusObjective }) {
+type ObjectivesModalProps = {
+    isOpen: boolean;
+    onClose: () => void;
+    playerRole: GameRole | null;
+    candidatePrimaryObjectives: string[];
+    hrPrimaryObjectives: string[];
+    bonusObjective: BonusObjective | null;
+};
+
+const ObjectivesModal: React.FC<ObjectivesModalProps> = ({ isOpen, onClose, playerRole, candidatePrimaryObjectives, hrPrimaryObjectives, bonusObjective }) => {
     if (!isOpen) return null;
 
     return (
@@ -49,8 +60,8 @@ function ObjectivesModal({ isOpen, onClose, playerRole, candidatePrimaryObjectiv
                     <div className="bonus-card">
                         <FaHandshake className="bonus-icon" />
                         <div>
-                            <p className="bonus-description">{bonusObjective.description}</p>
-                            <p className="bonus-points">{bonusObjective.bonus}</p>
+                            <p className="bonus-description">{bonusObjective?.description}</p>
+                            <p className="bonus-points">{bonusObjective?.bonus}</p>
                         </div>
                     </div>
                 </div>
