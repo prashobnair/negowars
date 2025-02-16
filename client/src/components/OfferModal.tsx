@@ -1,4 +1,5 @@
-// src/components/OfferModal.js
+// src/components/OfferModal.tsx
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -9,15 +10,26 @@ import {
     FaTimes,
     FaHandshake
 } from 'react-icons/fa';
+import { ModalInputs } from '../types'; // Import the type
 
-function OfferModal({
+
+type OfferModalProps = {
+    isOpen: boolean;
+    onClose: () => void; // Type the function
+    onSubmit: () => void; // Type the function
+    modalInputs: ModalInputs;
+    setValidatedModalInput: (field: keyof ModalInputs, value: string) => void;
+    formatCurrency: (value: number) => string;
+}
+
+const OfferModal: React.FC<OfferModalProps> = ({
     isOpen,
     onClose,
     onSubmit,
-    modalInputs, // Use the combined modalInputs object
-    setValidatedModalInput, // Use the combined setter
+    modalInputs,
+    setValidatedModalInput,
     formatCurrency
-}) {
+}) => {
 
     if (!isOpen) return null;
 
