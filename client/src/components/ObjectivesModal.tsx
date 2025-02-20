@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FaBullseye, FaCheck, FaMoneyCheckAlt, FaHandshake } from 'react-icons/fa';
-import { GameRole, BonusObjective } from '../types'; // Import types
+import { GameRole, BonusObjective } from '../types';
 
 type ObjectivesModalProps = {
     isOpen: boolean;

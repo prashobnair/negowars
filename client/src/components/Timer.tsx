@@ -4,7 +4,7 @@ import React from 'react';
 type TimerProps = {
   timeLeft: number;
   isPulsing: boolean;
-  formatTime: (seconds: number) => string; // Add type for the function
+  formatTime: (seconds: number) => string;
 };
 
 const Timer: React.FC<TimerProps> = ({ timeLeft, isPulsing, formatTime }) => {
