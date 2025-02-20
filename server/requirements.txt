@@ -1,3 +1,10 @@
+# requirements.txt
+pydantic-settings==2.1.0
 fastapi==0.95.0
 uvicorn==0.21.1
-websockets==11.0.3 # For WebSocket support
+websockets==11.0.3
+sqlalchemy[asyncio]==2.0.28
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.6
+spacy==3.7.4

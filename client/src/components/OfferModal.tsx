@@ -1,5 +1,5 @@
 // src/components/OfferModal.tsx
-import React, { useState } from 'react'; // Import useState
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
     FaDollarSign,
@@ -31,17 +31,14 @@ const OfferModal: React.FC<OfferModalProps> = ({
     formatCurrency
 }) => {
 
-    // Validation Error State
     const [errors, setErrors] = useState({
         salary: '',
         bonus: '',
         remoteDays: ''
     });
 
-    // New state for tracking which field is being edited
     const [editingField, setEditingField] = useState<keyof ModalInputs | null>(null);
 
-     // Updated Validation Setter
     const setValidatedInput = (field: keyof ModalInputs, value: string) => {
       let numValue = parseInt(value);
       let error = '';
@@ -67,12 +64,11 @@ const OfferModal: React.FC<OfferModalProps> = ({
                   break;
           }
       }
-        setErrors(prevErrors => ({ ...prevErrors, [field]: error })); // Update the specific error
-        setValidatedModalInput(field, value); //Still update, but with validated value
+        setErrors(prevErrors => ({ ...prevErrors, [field]: error }));
+        setValidatedModalInput(field, value);
 
     };
 
-    // New handler for inline editing
     const handleValueClick = (field: keyof ModalInputs) => {
         setEditingField(field);
     };
@@ -99,12 +95,11 @@ const OfferModal: React.FC<OfferModalProps> = ({
                 </div>
 
                 <div className="offer-input-group">
-                    {/* --- Updated Salary Input --- */}
                     <div className="input-container">
                         <FaDollarSign className="input-icon" />
                         <div className="input-wrapper">
                             <label htmlFor="modalSalary">
-                                Base Salary: 
+                                Base Salary:
                                 {editingField === 'salary' ? (
                                     <input
                                         type="number"
@@ -117,8 +112,8 @@ const OfferModal: React.FC<OfferModalProps> = ({
                                         max="1000000"
                                     />
                                 ) : (
-                                    <span 
-                                        className="editable-value" 
+                                    <span
+                                        className="editable-value"
                                         onClick={() => handleValueClick('salary')}
                                     >
                                         {formatCurrency(modalInputs.salary)}
@@ -148,7 +143,7 @@ const OfferModal: React.FC<OfferModalProps> = ({
                         <FaGift className="input-icon" />
                         <div className="input-wrapper">
                             <label htmlFor="modalBonus">
-                                Sign-On Bonus: 
+                                Sign-On Bonus:
                                 {editingField === 'bonus' ? (
                                     <input
                                         type="number"
@@ -161,8 +156,8 @@ const OfferModal: React.FC<OfferModalProps> = ({
                                         max="20000"
                                     />
                                 ) : (
-                                    <span 
-                                        className="editable-value" 
+                                    <span
+                                        className="editable-value"
                                         onClick={() => handleValueClick('bonus')}
                                     >
                                         {formatCurrency(modalInputs.bonus)}
@@ -192,7 +187,7 @@ const OfferModal: React.FC<OfferModalProps> = ({
                         <FaHome className="input-icon" />
                         <div className="input-wrapper">
                             <label htmlFor="modalRemoteDays">
-                                Remote Days: 
+                                Remote Days:
                                 {editingField === 'remoteDays' ? (
                                     <input
                                         type="number"
@@ -205,8 +200,8 @@ const OfferModal: React.FC<OfferModalProps> = ({
                                         max="5"
                                     />
                                 ) : (
-                                    <span 
-                                        className="editable-value" 
+                                    <span
+                                        className="editable-value"
                                         onClick={() => handleValueClick('remoteDays')}
                                     >
                                         {modalInputs.remoteDays}

@@ -1,5 +1,6 @@
-# schemas.py -  This should be the SAME as the previous response's schemas.py:
-from pydantic import BaseModel, conint, constr, validator, Field
+# schemas.py
+from datetime import datetime
+from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional
 
 class BaseMessage(BaseModel):
@@ -25,11 +26,11 @@ class TypingMessage(BaseMessage):
     type: str = "typing"
     isTyping: bool
 
-class OfferMessage(BaseMessage):  # Renamed from just OfferPayload
+class OfferMessage(BaseMessage):
     type: str = "offer"
     data: "OfferPayload" # Nested validation
 
-class OfferPayload(BaseModel): # Keep this separate for reusability
+class OfferPayload(BaseModel):
     salary: int = Field(..., ge=0, le=1000000)
     bonus: int = Field(..., ge=0, le=10000)
     remote_days: int = Field(..., ge=0, le=5)
@@ -37,7 +38,7 @@ class OfferPayload(BaseModel): # Keep this separate for reusability
 class AcceptMessage(BaseMessage):
     type: str = "accept"
 
-class GameOverMessage(BaseMessage): # For sending game over info
+class GameOverMessage(BaseMessage):
     type: str = "gameover"
     messageId: str
     outcome: str
@@ -50,3 +51,34 @@ class GameOverMessage(BaseMessage): # For sending game over info
 class ErrorMessage(BaseMessage):
     type: str = "error"
     message: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class UserCreate(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+
+    @validator("password")
+    def password_strength(cls, v):
+        # Add more robust password strength checks here, if desired.
+        if not any(char.isdigit() for char in v):
+            raise ValueError("Password must contain at least one number")
+        if not any(char.isupper() for char in v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(char.islower() for char in v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not any(char in "!@#$%^&*()_+=-`~[]\{}|;':\",./<>?" for char in v):
+            raise ValueError("Password must contain at least one special character")
+
+        return v
+
+class UserResponse(BaseModel): #For the /users/me endpoint
+    id: int
+    username: str
+    email: str
+    last_seen: datetime
+    class Config:
+        from_attributes = True

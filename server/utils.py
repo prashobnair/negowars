@@ -1,5 +1,5 @@
 # utils.py
-from config import VALIDATION_RANGES
+from server.config import VALIDATION_RANGES
 
 def validate_offer(salary: int, bonus: int, remote_days: int) -> tuple[bool, str]:
     """
